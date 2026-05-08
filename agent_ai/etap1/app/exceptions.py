@@ -1,0 +1,2 @@
+class AIResponseError(Exception):
+    pass

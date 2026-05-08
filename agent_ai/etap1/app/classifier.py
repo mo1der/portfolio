@@ -33,4 +33,5 @@ def classify_text(text: str) -> ClassificationResponse:
         priority=priority,
         summary=text,
         suggested_action=suggested_action,
+        source="RULE_BASED",
     )

@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
-from app.classifier import classify_text
+from app.agent_router import route_message
+
 from app.schemas import ClassificationRequest, ClassificationResponse
 
 app = FastAPI()
@@ -15,4 +16,4 @@ def root():
 
 @app.post("/classify", response_model=ClassificationResponse)
 def classify(request: ClassificationRequest):
-    return classify_text(request.text)
+    return route_message(request.text)

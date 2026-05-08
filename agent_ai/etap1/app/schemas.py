@@ -25,3 +25,4 @@ class ClassificationResponse(BaseModel):
     priority: Priority
     summary: str
     suggested_action: str
+    source: str
