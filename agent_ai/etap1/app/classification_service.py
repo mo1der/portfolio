@@ -1,11 +1,15 @@
 from app.ai_classifier import classify_text_with_ai
 from app.classifier import classify_text
+from app.logger import logger
 from app.schemas import ClassificationResponse
 
 
 def classify_message(text: str) -> ClassificationResponse:
     try:
-        return classify_text_with_ai(text)
+        logger.info("Trying AI classifier")
+        result = classify_text_with_ai(text)
+        logger.info("AI classifier succeeded")
+        return result
     except Exception as e:
-        print(f"AI classifier failed, using fallback. Error: {repr(e)}")
+        logger.warning(f"AI classifier failed, using fallback. Error: {repr(e)}")
         return classify_text(text)

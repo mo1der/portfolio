@@ -1,6 +1,8 @@
-from app.classification_service import classify_message
+from app.agents import AGENTS
 from app.schemas import ClassificationResponse
 
 
 def route_message(text: str) -> ClassificationResponse:
-    return classify_message(text)
+    agent = AGENTS["classification"]
+
+    return agent(text)
