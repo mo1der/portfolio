@@ -37,3 +37,11 @@ def test_classify_endpoint_validation_error():
     )
 
     assert response.status_code == 422
+
+def test_health_endpoint():
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "ok"
+    }

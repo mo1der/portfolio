@@ -13,6 +13,11 @@ def root():
         "message": "AI Classifier Backend działa"
     }
 
+@app.get("/health")
+def health_check():
+    return {
+        "status": "ok"
+    }
 
 @app.post("/classify", response_model=ClassificationResponse)
 def classify(request: ClassificationRequest):
