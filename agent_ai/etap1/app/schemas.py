@@ -1,7 +1,7 @@
 from enum import Enum
 
 from pydantic import BaseModel
-
+from pydantic import BaseModel, Field, field_validator
 
 class Category(str, Enum):
     IT_SUPPORT = "IT_SUPPORT"
@@ -17,7 +17,14 @@ class Priority(str, Enum):
 
 
 class ClassificationRequest(BaseModel):
-    text: str
+    text: str = Field(..., min_length=1)
+
+    @field_validator("text")
+    @classmethod
+    def text_must_not_be_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Text cannot be empty")
+        return value
 
 
 class ClassificationResponse(BaseModel):
