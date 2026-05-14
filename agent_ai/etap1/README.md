@@ -1,17 +1,32 @@
 # AI Classifier Backend
 
-Backend API do klasyfikacji wiadomości biznesowych.
+Backend API do klasyfikowania zgłoszeń tekstowych.
 
-Projekt powstał jako Etap 1 nauki budowania agentów AI i backendów, które można później wdrażać komercyjnie w firmach.
+Projekt jest pierwszym etapem nauki budowania agentów AI i backendów, które mogą być używane w firmach do automatyzacji obsługi zgłoszeń, wiadomości lub prostych procesów biznesowych.
 
-Aplikacja przyjmuje wiadomość tekstową i klasyfikuje ją do jednej z kategorii, np.:
+---
 
-- FINANCE
-- IT_SUPPORT
-- HR
-- OTHER
+## Co robi ten projekt?
 
-Dodatkowo określa priorytet wiadomości oraz sugerowaną akcję.
+Aplikacja przyjmuje tekst zgłoszenia i zwraca klasyfikację, czyli informację:
+
+- jakiej kategorii dotyczy zgłoszenie,
+- jaki ma priorytet,
+- krótkie podsumowanie,
+- sugerowaną akcję,
+- źródło klasyfikacji.
+
+Przykładowe kategorie:
+
+- `FINANCE`
+- `IT_SUPPORT`
+- `HR`
+- `OTHER`
+
+Projekt obsługuje klasyfikację:
+
+- regułową, czyli na podstawie prostych zasad w kodzie,
+- AI, czyli z użyciem modelu OpenAI, jeśli skonfigurowany jest klucz API.
 
 ---
 
@@ -24,155 +39,48 @@ Projekt używa:
 - Uvicorn
 - Pydantic
 - Pytest
-- OpenAI API
+- OpenAI SDK
 - Docker
+- Docker Compose
 
 ---
 
 ## Struktura projektu
 
+Przykładowa struktura katalogów:
+
 ```text
 etap1/
 ├── app/
+│   ├── __init__.py
 │   ├── main.py
-│   ├── schemas.py
+│   ├── models.py
 │   ├── classifier.py
 │   ├── ai_classifier.py
-│   ├── classification_service.py
 │   ├── agent_router.py
-│   ├── agents.py
+│   ├── config.py
 │   ├── exceptions.py
-│   ├── error_handlers.py
-│   ├── logging_config.py
-│   ├── middleware.py
-│   └── prompt_loader.py
+│   └── logging_config.py
 ├── tests/
-│   ├── test_api.py
-│   ├── test_health.py
+│   ├── test_main.py
 │   ├── test_classifier.py
 │   ├── test_ai_classifier.py
-│   ├── test_ai_errors.py
-│   ├── test_classification_service.py
-│   ├── test_agent_router.py
-│   ├── test_error_handlers.py
-│   └── test_prompt_loader.py
-├── prompts/
+│   └── test_agent_router.py
 ├── Dockerfile
-├── .dockerignore
-├── .gitignore
-├── pytest.ini
+├── docker-compose.yml
 ├── requirements.txt
+├── .env.example
+├── .gitignore
 └── README.md
 ```
 
 ---
 
-## Jak działa aplikacja
-
-Aplikacja ma dwa sposoby klasyfikacji wiadomości.
-
-### 1. Klasyfikacja AI
-
-Jeśli dostępny jest klucz OpenAI, aplikacja może użyć modelu AI do klasyfikacji wiadomości.
-
-AI zwraca dane takie jak:
-
-```json
-{
-  "category": "FINANCE",
-  "priority": "HIGH",
-  "summary": "Klient zgłasza problem z fakturą.",
-  "suggested_action": "Przekazać do działu finansów."
-}
-```
-
-### 2. Klasyfikacja regułowa
-
-Jeśli OpenAI nie działa albo brakuje klucza API, aplikacja korzysta z prostego klasyfikatora regułowego.
-
-Dzięki temu backend nadal działa nawet bez dostępu do OpenAI.
-
----
-
-## Endpointy API
-
-### Strona główna
-
-```http
-GET /
-```
-
-Przykładowa odpowiedź:
-
-```json
-{
-  "message": "AI Classifier Backend działa"
-}
-```
-
-### Health check
-
-```http
-GET /health
-```
-
-Służy do sprawdzenia, czy aplikacja działa.
-
-Przykładowa odpowiedź:
-
-```json
-{
-  "status": "ok"
-}
-```
-
-### Klasyfikacja wiadomości
-
-```http
-POST /classify
-```
-
-Przykładowe zapytanie:
-
-```json
-{
-  "message": "Nie dostałem faktury za ostatni miesiąc."
-}
-```
-
-Przykładowa odpowiedź:
-
-```json
-{
-  "category": "FINANCE",
-  "priority": "HIGH",
-  "summary": "Klient zgłasza problem z fakturą.",
-  "suggested_action": "Przekazać do działu finansów.",
-  "source": "AI"
-}
-```
-
-Jeśli aplikacja użyje klasyfikatora regułowego, pole `source` może mieć wartość:
-
-```text
-RULE_BASED
-```
-
----
-
-## Dokumentacja API
-
-Po uruchomieniu aplikacji dokumentacja Swagger jest dostępna pod adresem:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
----
-
-## Uruchomienie lokalne
+## Uruchamianie lokalne bez Dockera
 
 ### 1. Utworzenie środowiska wirtualnego
+
+W folderze projektu uruchom:
 
 ```bash
 python -m venv venv
@@ -180,19 +88,25 @@ python -m venv venv
 
 ### 2. Aktywacja środowiska
 
-Windows PowerShell:
+Na Windows PowerShell:
 
-```powershell
-.\venv\Scripts\activate
+```bash
+.\venv\Scripts\Activate.ps1
 ```
 
-Jeśli aktywacja jest zablokowana przez politykę PowerShell, można uruchamiać komendy bez aktywacji, np.:
+Jeśli PowerShell blokuje aktywację środowiska, można uruchomić:
 
-```powershell
-.\venv\Scripts\python.exe -m pytest
+```bash
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
-### 3. Instalacja bibliotek
+A potem ponownie:
+
+```bash
+.\venv\Scripts\Activate.ps1
+```
+
+### 3. Instalacja zależności
 
 ```bash
 pip install -r requirements.txt
@@ -204,244 +118,178 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-Aplikacja będzie dostępna pod adresem:
+Po uruchomieniu aplikacja będzie dostępna pod adresem:
 
 ```text
 http://127.0.0.1:8000
 ```
 
----
-
-## Zmienne środowiskowe
-
-Aplikacja może korzystać z pliku `.env`.
-
-Przykład:
-
-```env
-OPENAI_API_KEY=tu_wklej_swoj_klucz_api
-```
-
-Plik `.env` nie powinien być dodawany do repozytorium.
-
-Dlatego znajduje się w `.gitignore` oraz `.dockerignore`.
-
----
-
-## Uruchamianie testów
-
-Aby uruchomić wszystkie testy:
-
-```powershell
-.\venv\Scripts\python.exe -m pytest
-```
-
-Oczekiwany wynik:
+Dokumentacja API będzie dostępna pod adresem:
 
 ```text
-16 passed
+http://127.0.0.1:8000/docs
 ```
 
 ---
 
 ## Uruchamianie przez Docker
 
-Projekt można uruchomić również w kontenerze Dockera.
+Docker pozwala uruchomić aplikację w kontenerze, czyli w odizolowanym środowisku.
 
-Docker pozwala uruchomić aplikację w osobnym środowisku, które zawiera własnego Pythona, biblioteki i kod aplikacji.
+Dzięki temu projekt nie musi polegać wyłącznie na ustawieniach lokalnego komputera.
 
-Dzięki temu nie trzeba ręcznie konfigurować środowiska na każdym komputerze.
-
-### Budowanie obrazu
-
-W głównym folderze projektu uruchom:
+### 1. Zbudowanie obrazu Docker
 
 ```bash
 docker build -t ai-classifier-backend .
 ```
 
-Kropka na końcu oznacza:
-
-```text
-buduj obraz z aktualnego folderu
-```
-
-### Uruchomienie kontenera
+### 2. Uruchomienie kontenera
 
 ```bash
 docker run -p 8000:8000 ai-classifier-backend
 ```
 
-Po uruchomieniu aplikacja będzie dostępna pod adresami:
+Po uruchomieniu aplikacja będzie dostępna tutaj:
 
 ```text
-http://127.0.0.1:8000
-http://127.0.0.1:8000/health
-http://127.0.0.1:8000/docs
+http://localhost:8000
 ```
 
-### Uruchomienie kontenera z plikiem `.env`
+Dokumentacja API:
 
-Jeśli aplikacja ma korzystać z klucza OpenAI, można uruchomić kontener z plikiem `.env`:
+```text
+http://localhost:8000/docs
+```
+
+---
+
+## Uruchamianie przez Docker Compose
+
+Docker Compose pozwala uruchomić projekt prostszą komendą.
+
+Nie trzeba ręcznie podawać wszystkich parametrów kontenera, ponieważ są zapisane w pliku:
+
+```text
+docker-compose.yml
+```
+
+### 1. Uruchomienie aplikacji
 
 ```bash
-docker run --env-file .env -p 8000:8000 ai-classifier-backend
+docker compose up --build
 ```
 
-Plik `.env` nie jest kopiowany do obrazu Dockera, ponieważ znajduje się w `.dockerignore`.
+Ta komenda:
 
-### Zatrzymanie kontenera
+- buduje obraz aplikacji,
+- tworzy sieć Dockera,
+- tworzy kontener,
+- uruchamia backend.
 
-Jeśli kontener działa w terminalu, można go zatrzymać skrótem:
+Po uruchomieniu aplikacja będzie dostępna tutaj:
+
+```text
+http://localhost:8000
+```
+
+Dokumentacja API:
+
+```text
+http://localhost:8000/docs
+```
+
+### 2. Zatrzymanie aplikacji
+
+Jeśli aplikacja działa w terminalu, można ją zatrzymać skrótem:
 
 ```text
 CTRL + C
 ```
 
----
-
-## Eksport obrazu Dockera do pliku
-
-Gotowy obraz Dockera można zapisać do jednego pliku:
+Można też użyć komendy:
 
 ```bash
-docker save -o ai-classifier-backend.tar ai-classifier-backend
+docker compose down
 ```
 
-Powstanie plik:
+Ta komenda zatrzymuje i usuwa kontenery utworzone przez Compose.
 
-```text
-ai-classifier-backend.tar
-```
+---
 
-Taki plik można przenieść na inny komputer, na którym jest Docker.
+## Ważne komendy Docker Compose
 
-### Załadowanie obrazu na innym komputerze
+### Uruchomienie aplikacji
 
 ```bash
-docker load -i ai-classifier-backend.tar
+docker compose up --build
 ```
 
-Potem można uruchomić aplikację:
+### Uruchomienie aplikacji w tle
 
 ```bash
-docker run -p 8000:8000 ai-classifier-backend
+docker compose up --build -d
 ```
 
----
+Opcja `-d` oznacza tryb w tle.
 
-## Plik Dockerfile
+Aplikacja działa, ale nie zajmuje terminala.
 
-Projekt zawiera plik:
-
-```text
-Dockerfile
-```
-
-Odpowiada on za zbudowanie obrazu Dockera.
-
-Aktualna wersja:
-
-```dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-
-COPY requirements.txt .
-
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY app ./app
-
-EXPOSE 8000
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
----
-
-## Plik .dockerignore
-
-Projekt zawiera plik:
-
-```text
-.dockerignore
-```
-
-Odpowiada on za pomijanie niepotrzebnych plików przy budowaniu obrazu Dockera.
-
-Aktualna wersja:
-
-```text
-venv/
-__pycache__/
-.pytest_cache/
-*.pyc
-.env
-.git/
-.idea/
-```
-
-Dzięki temu do obrazu Dockera nie trafiają m.in.:
-
-- lokalne środowisko `venv`,
-- cache Pythona,
-- prywatny plik `.env`,
-- folder `.git`,
-- ustawienia PyCharma.
-
----
-
-## Git — podstawowy workflow
-
-Najczęstszy schemat pracy:
+### Sprawdzenie działających kontenerów
 
 ```bash
-git status
-git add .
-git status
-git commit -m "Opis zmian"
-git push
+docker ps
 ```
 
-Znaczenie:
+### Sprawdzenie wszystkich kontenerów
 
-```text
-git status   -> sprawdza, co się zmieniło
-git add .    -> dodaje zmiany do najbliższego commita
-git commit   -> zapisuje punkt w historii projektu
-git push     -> wysyła zmiany na GitHub
+```bash
+docker ps -a
+```
+
+### Zatrzymanie aplikacji
+
+```bash
+docker compose down
+```
+
+### Podejrzenie logów
+
+```bash
+docker compose logs
+```
+
+### Podejrzenie logów na żywo
+
+```bash
+docker compose logs -f
 ```
 
 ---
 
-## Status projektu
+## Testowanie aplikacji
 
-Aktualny etap:
+Testy uruchamia się komendą:
 
-```text
-Etap 1.6 — Docker
+```bash
+pytest
 ```
 
-Zrobione:
+Albo dokładniej:
 
-- backend FastAPI,
-- endpoint `/`,
-- endpoint `/health`,
-- endpoint `/classify`,
-- dokumentacja `/docs`,
-- klasyfikator regułowy,
-- klasyfikator AI,
-- fallback z AI na reguły,
-- obsługa błędów,
-- logowanie requestów,
-- testy automatyczne,
-- Dockerfile,
-- .dockerignore,
-- uruchomienie aplikacji w kontenerze,
-- poprawione testy po zmianie klienta OpenAI.
+```bash
+python -m pytest
+```
 
-Aktualny wynik testów:
+Projekt posiada testy sprawdzające między innymi:
+
+- działanie endpointów API,
+- klasyfikację regułową,
+- obsługę klasyfikacji AI,
+- obsługę błędnej odpowiedzi AI,
+- routing między klasyfikatorem regułowym i AI.
+
+Poprawny wynik testów powinien wyglądać podobnie do:
 
 ```text
 16 passed
@@ -449,13 +297,190 @@ Aktualny wynik testów:
 
 ---
 
-## Kolejne możliwe kroki
+## Endpointy API
 
-Planowane następne etapy:
+### GET /
 
-- dodanie `docker-compose.yml`,
-- uporządkowanie konfiguracji aplikacji,
-- rozbudowa klasyfikatora,
-- dodanie prostego frontendu,
-- przygotowanie aplikacji pod wdrożenie na serwerze,
-- dodanie CI/CD, czyli automatycznego uruchamiania testów po wypchnięciu kodu na GitHub.
+Endpoint testowy.
+
+Sprawdza, czy backend działa.
+
+Przykładowa odpowiedź:
+
+```json
+{
+  "message": "AI Classifier Backend działa"
+}
+```
+
+### GET /health
+
+Endpoint zdrowia aplikacji.
+
+Służy do sprawdzania, czy aplikacja działa poprawnie.
+
+Przykładowa odpowiedź:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+### POST /classify
+
+Endpoint do klasyfikowania tekstu.
+
+Przykładowe zapytanie:
+
+```json
+{
+  "text": "Mam problem z fakturą za ostatni miesiąc."
+}
+```
+
+Przykładowa odpowiedź:
+
+```json
+{
+  "category": "FINANCE",
+  "priority": "HIGH",
+  "summary": "Zgłoszenie dotyczy problemu z fakturą.",
+  "suggested_action": "Przekazać zgłoszenie do działu finansowego.",
+  "source": "RULE_BASED"
+}
+```
+
+---
+
+## Plik .env
+
+Projekt może używać pliku `.env` do przechowywania ustawień lokalnych.
+
+Przykład:
+
+```env
+OPENAI_API_KEY=tu_wklej_swoj_klucz_api
+USE_AI_CLASSIFIER=false
+```
+
+Pliku `.env` nie należy dodawać do Gita, ponieważ może zawierać prywatne dane.
+
+Dlatego w `.gitignore` powinien znajdować się wpis:
+
+```text
+.env
+```
+
+Do repozytorium można dodać plik przykładowy:
+
+```text
+.env.example
+```
+
+---
+
+## Przykładowy plik .env.example
+
+```env
+OPENAI_API_KEY=
+USE_AI_CLASSIFIER=false
+```
+
+---
+
+## Git — podstawowy workflow
+
+Po zmianach w projekcie warto sprawdzić status:
+
+```bash
+git status
+```
+
+Dodanie wszystkich zmienionych plików:
+
+```bash
+git add .
+```
+
+Utworzenie commita:
+
+```bash
+git commit -m "Update README after Docker Compose setup"
+```
+
+Wysłanie zmian na GitHub:
+
+```bash
+git push
+```
+
+Jeśli Git pokazuje:
+
+```text
+nothing to commit, working tree clean
+```
+
+to znaczy, że nie ma żadnych nowych zmian do zapisania.
+
+---
+
+## Czego nauczyliśmy się w tym etapie?
+
+W tym etapie projekt został uporządkowany pod kątem uruchamiania w Dockerze.
+
+Zrobione zostało:
+
+- dodanie Dockerfile,
+- dodanie docker-compose.yml,
+- uruchomienie aplikacji w kontenerze,
+- sprawdzenie działania FastAPI w Dockerze,
+- uporządkowanie README,
+- opisanie lokalnego uruchamiania,
+- opisanie uruchamiania przez Docker,
+- opisanie uruchamiania przez Docker Compose,
+- opisanie podstawowych komend testowych i gitowych.
+
+---
+
+## Aktualny status projektu
+
+Projekt posiada:
+
+- działający backend FastAPI,
+- endpoint `/`,
+- endpoint `/health`,
+- endpoint `/classify`,
+- klasyfikator regułowy,
+- obsługę klasyfikatora AI,
+- obsługę błędów AI,
+- logowanie requestów,
+- testy automatyczne,
+- Dockerfile,
+- docker-compose.yml,
+- dokumentację w README.
+
+Aktualny stan testów:
+
+```text
+16 passed
+```
+
+---
+
+## Następny etap
+
+Następny logiczny etap to:
+
+```text
+Etap 1.9 — przygotowanie projektu pod portfolio i prezentację techniczną
+```
+
+W tym etapie można przygotować:
+
+- opis projektu po polsku i angielsku,
+- krótką sekcję „Business use case”,
+- opis architektury,
+- screeny z działania aplikacji,
+- przykładowe requesty i response,
+- finalny commit kończący Etap 1.
