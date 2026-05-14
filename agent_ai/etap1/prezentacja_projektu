@@ -1,0 +1,87 @@
+Prezentacja projektu
+Slajd 1: Opis projektu + cel
+Slajd 2: Diagram architektury (obraz w katalogu głównym)
+Slajd 3: Przykład request/response
+Slajd 4: Technologie i testy
+Slajd 5: Wnioski / dalszy rozwój
+
+💡 Tip: W demo możesz uruchomić uvicorn app.main:app --reload i pokazać interaktywnie /docs w przeglądarce, aby wizualnie zaprezentować endpoint /classify.
+
+
+Prezentacja – AI Classifier Backend
+Slajd 1 – Tytuł i cel
+
+Tytuł: AI Classifier Backend
+Cel: Automatyczna klasyfikacja zgłoszeń tekstowych dla firm, wykorzystanie reguł i AI.
+Krótki opis: Backend napisany w FastAPI, z endpointami /health i /classify, testami automatycznymi i gotowy do uruchomienia w Dockerze.
+
+Slajd 2 – Problem i rozwiązanie
+
+Problem: Ręczne klasyfikowanie zgłoszeń klienta zajmuje czas i jest podatne na błędy.
+Rozwiązanie:
+
+Backend automatycznie klasyfikuje zgłoszenia według kategorii i priorytetu
+Wskazuje podsumowanie i sugerowaną akcję
+Źródło klasyfikacji: regułowe lub AI
+Slajd 3 – Schemat architektury
+
+Diagram: wklej obraz ze schematem w katalogu głównym (a_full_page_screenshot_image_of_a_readme_style_d.png)
+
+Opis bloków:
+
+FastAPI Backend – przyjmuje requesty HTTP
+AI Classifier / Rule-based logic – klasyfikuje wiadomości
+Endpoint /classify – zwraca JSON z kategorią, priorytetem, podsumowaniem
+Middleware i logowanie – monitoruje działania i obsługuje błędy
+Testy jednostkowe – sprawdzają poprawność działania
+Slajd 4 – Przykład użycia
+
+Request:
+
+{
+  "text": "Mam problem z fakturą za ostatni miesiąc."
+}
+
+Response:
+
+{
+  "category": "FINANCE",
+  "priority": "HIGH",
+  "summary": "Zgłoszenie dotyczy problemu z fakturą.",
+  "suggested_action": "Przekazać zgłoszenie do działu finansowego.",
+  "source": "RULE_BASED"
+}
+Slajd 5 – Technologie
+Python 3.11
+FastAPI + Uvicorn
+Pydantic
+OpenAI API
+Pytest (testy jednostkowe)
+Docker i Docker Compose
+Slajd 6 – Uruchomienie
+
+Lokalnie:
+
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+
+Docker:
+
+docker build -t ai-classifier-backend .
+docker run -p 8000:8000 ai-classifier-backend
+
+Docker Compose:
+
+docker compose up --build
+Slajd 7 – Testy
+Wszystkie testy jednostkowe:
+pytest
+Sprawdza: endpointy, klasyfikację regułową i AI, routing i obsługę błędów
+Przykładowy wynik: 16 passed
+Slajd 8 – Dalszy rozwój
+Dodanie nowych kategorii i priorytetów
+Integracja z frontendem lub Slack/Teams
+Analiza statystyk klasyfikacji
+Optymalizacja AI pod większe zbiory danych

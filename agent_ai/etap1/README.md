@@ -73,7 +73,17 @@ etap1/
 ├── .gitignore
 └── README.md
 ```
+## Diagram architektury
 
+Poniżej schemat pokazujący przepływ danych w backendzie AI Classifier:
+
+![Diagram AI Classifier Backend](a_full_page_screenshot_image_of_a_readme_style_d.png)
+
+- FastAPI Backend przyjmuje requesty HTTP
+- AI Classifier / Rule-based logic klasyfikuje wiadomości
+- Endpoint `/classify` zwraca JSON z kategorią, priorytetem i podsumowaniem
+- Middleware i logowanie monitorują działania
+- Testy jednostkowe sprawdzają poprawność działania
 ---
 
 ## Uruchamianie lokalne bez Dockera
