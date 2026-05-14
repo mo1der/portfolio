@@ -1,31 +1,45 @@
 import json
+import os
 
+from dotenv import load_dotenv
 from openai import OpenAI
 
-from app.config import OPENAI_API_KEY, OPENAI_MODEL
-from app.schemas import Category, ClassificationResponse, Priority
+load_dotenv()
 
-from app.prompt_loader import load_prompt
-from app.exceptions import AIResponseError
-
-client = OpenAI(api_key=OPENAI_API_KEY)
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 
-def classify_text_with_ai(text: str) -> ClassificationResponse:
-    system_prompt = load_prompt("classification_prompt.txt")
+def classify_text_with_ai(text: str) -> dict:
+    if not OPENAI_API_KEY:
+        raise RuntimeError("Brak OPENAI_API_KEY")
+
+    client = OpenAI(api_key=OPENAI_API_KEY)
+
+    prompt = f"""
+Klasyfikuj wiadomość użytkownika.
+
+Zwróć odpowiedź wyłącznie jako JSON w formacie:
+{{
+  "category": "FINANCE | IT_SUPPORT | HR | OTHER",
+  "priority": "LOW | MEDIUM | HIGH",
+  "summary": "krótkie streszczenie",
+  "suggested_action": "proponowana akcja"
+}}
+
+Wiadomość:
+{text}
+"""
+
     response = client.chat.completions.create(
-        model=OPENAI_MODEL,
+        model="gpt-4.1-mini",
         messages=[
             {
                 "role": "system",
-                "content": system_prompt,
+                "content": "Jesteś agentem AI do klasyfikacji wiadomości biznesowych.",
             },
             {
                 "role": "user",
-                "content": (
-                    f"Zaklasyfikuj zgłoszenie:\n{text}\n\n"
-                    "Zwróć JSON z polami: category, priority, summary, suggested_action."
-                ),
+                "content": prompt,
             },
         ],
         temperature=0,
@@ -34,16 +48,6 @@ def classify_text_with_ai(text: str) -> ClassificationResponse:
     content = response.choices[0].message.content
 
     try:
-        data = json.loads(content)
-    except json.JSONDecodeError as e:
-        raise AIResponseError(
-            f"Invalid AI JSON response: {content}"
-        ) from e
-
-    return ClassificationResponse(
-        category=Category(data["category"]),
-        priority=Priority(data["priority"]),
-        summary=data["summary"],
-        suggested_action=data["suggested_action"],
-        source="AI",
-    )
+        return json.loads(content)
+    except json.JSONDecodeError:
+        raise RuntimeError("AI zwróciło niepoprawny JSON")
