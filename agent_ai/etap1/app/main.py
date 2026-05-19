@@ -70,8 +70,19 @@ def classify_message(
     return classification
 
 @app.post("/process", response_model=ProcessResponse)
-def process(request: ClassificationRequest):
-    return process_message(request)
+def process(
+    request: ClassificationRequest,
+    db: Session = Depends(get_db),
+):
+    result = process_message(request)
+
+    save_ticket_history(
+        db=db,
+        input_text=request.text,
+        classification=result,
+    )
+
+    return result
 
 @app.get("/tickets", response_model=list[TicketHistoryResponse])
 def read_ticket_history(db: Session = Depends(get_db)):
