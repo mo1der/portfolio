@@ -1,7 +1,7 @@
 from enum import Enum
 
-from pydantic import BaseModel
 from pydantic import BaseModel, Field, field_validator
+
 
 class Category(str, Enum):
     IT_SUPPORT = "IT_SUPPORT"
@@ -14,6 +14,21 @@ class Priority(str, Enum):
     LOW = "LOW"
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"
+
+
+class ActionType(str, Enum):
+    CREATE_FINANCE_TICKET = "CREATE_FINANCE_TICKET"
+    CREATE_IT_TICKET = "CREATE_IT_TICKET"
+    CREATE_HR_CASE = "CREATE_HR_CASE"
+    MARK_AS_LOW_PRIORITY = "MARK_AS_LOW_PRIORITY"
+    SEND_TO_GENERAL_QUEUE = "SEND_TO_GENERAL_QUEUE"
+    ESCALATE_TO_MANAGER = "ESCALATE_TO_MANAGER"
+
+
+class ActionStatus(str, Enum):
+    SIMULATED = "SIMULATED"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
 
 
 class ClassificationRequest(BaseModel):
@@ -33,3 +48,19 @@ class ClassificationResponse(BaseModel):
     summary: str
     suggested_action: str
     source: str
+
+
+class ActionResult(BaseModel):
+    action_type: ActionType
+    target_department: Category
+    status: ActionStatus
+    message: str
+
+
+class ProcessResponse(BaseModel):
+    category: Category
+    priority: Priority
+    summary: str
+    suggested_action: str
+    source: str
+    executed_action: ActionResult

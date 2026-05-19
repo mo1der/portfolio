@@ -1,6 +1,10 @@
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
+
 from app.agent_router import route_message
-from app.schemas import ClassificationRequest, ClassificationResponse
+from app.process_service import process_message
+from app.schemas import ClassificationRequest, ClassificationResponse, ProcessResponse
+
 from app.core.settings import settings
 
 from app.error_handlers import (
@@ -11,7 +15,6 @@ from app.error_handlers import (
 
 from app.exceptions import AppError
 from app.middleware import RequestLoggingMiddleware
-from fastapi.exceptions import RequestValidationError
 
 app = FastAPI(
     title=settings.app_name,
@@ -44,3 +47,8 @@ def health_check():
 @app.post("/classify", response_model=ClassificationResponse)
 def classify(request: ClassificationRequest):
     return route_message(request.text)
+
+
+@app.post("/process", response_model=ProcessResponse)
+def process(request: ClassificationRequest):
+    return process_message(request)
