@@ -1,9 +1,17 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
+from sqlalchemy.orm import Session
+
+from app.database import Base, engine, get_db
+from app.repositories import get_ticket_history, save_ticket_history
+
+
 from fastapi.exceptions import RequestValidationError
 
 from app.agent_router import route_message
 from app.process_service import process_message
-from app.schemas import ClassificationRequest, ClassificationResponse, ProcessResponse
+
+from app.schemas import ClassificationRequest, ClassificationResponse, ProcessResponse, TicketHistoryResponse
+
 
 from app.core.settings import settings
 
@@ -20,6 +28,8 @@ app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
 )
+
+Base.metadata.create_all(bind=engine)
 
 app.add_exception_handler(RequestValidationError, validation_error_handler)
 
@@ -45,10 +55,24 @@ def health_check():
     }
 
 @app.post("/classify", response_model=ClassificationResponse)
-def classify(request: ClassificationRequest):
-    return route_message(request.text)
+def classify_message(
+    request: ClassificationRequest,
+    db: Session = Depends(get_db),
+):
+    classification = route_message(request.text)
 
+    save_ticket_history(
+        db=db,
+        input_text=request.text,
+        classification=classification,
+    )
+
+    return classification
 
 @app.post("/process", response_model=ProcessResponse)
 def process(request: ClassificationRequest):
     return process_message(request)
+
+@app.get("/tickets", response_model=list[TicketHistoryResponse])
+def read_ticket_history(db: Session = Depends(get_db)):
+    return get_ticket_history(db)

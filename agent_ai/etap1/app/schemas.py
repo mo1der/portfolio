@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import Enum
 
 from pydantic import BaseModel, Field, field_validator
@@ -64,3 +65,20 @@ class ProcessResponse(BaseModel):
     suggested_action: str
     source: str
     executed_action: ActionResult
+
+class TicketHistoryResponse(BaseModel):
+    id: int
+    input_text: str
+    category: Category
+    priority: Priority
+    summary: str
+    suggested_action: str
+    source: str | None = None
+    executed_action_type: str | None = None
+    executed_action_status: str | None = None
+    executed_action_message: str | None = None
+    created_at: datetime
+
+    model_config = {
+        "from_attributes": True
+    }
