@@ -1,6 +1,6 @@
 # AI Classifier Backend
 
-Backend API do klasyfikowania zgłoszeń tekstowych.
+Backend API do klasyfikowania zgłoszeń tekstowych oraz symulowanego wykonywania akcji po klasyfikacji.
 
 Projekt jest pierwszym etapem nauki budowania agentów AI i backendów, które mogą być używane w firmach do automatyzacji obsługi zgłoszeń, wiadomości lub prostych procesów biznesowych.
 
@@ -16,6 +16,8 @@ Aplikacja przyjmuje tekst zgłoszenia i zwraca klasyfikację, czyli informację:
 - sugerowaną akcję,
 - źródło klasyfikacji.
 
+Dodatkowo projekt posiada endpoint `/process`, który po klasyfikacji wybiera i symuluje wykonanie dalszej akcji biznesowej.
+
 Przykładowe kategorie:
 
 - `FINANCE`
@@ -23,12 +25,39 @@ Przykładowe kategorie:
 - `HR`
 - `OTHER`
 
+Przykładowe akcje po klasyfikacji:
+
+- `CREATE_FINANCE_TICKET`
+- `CREATE_IT_TICKET`
+- `CREATE_HR_CASE`
+- `MARK_AS_LOW_PRIORITY`
+- `SEND_TO_GENERAL_QUEUE`
+- `ESCALATE_TO_MANAGER`
+- 
 Projekt obsługuje klasyfikację:
 
 - regułową, czyli na podstawie prostych zasad w kodzie,
 - AI, czyli z użyciem modelu OpenAI, jeśli skonfigurowany jest klucz API.
 
 ---
+
+## Główna idea projektu
+
+Projekt pokazuje prosty przepływ automatyzacji biznesowej:
+
+wiadomość użytkownika
+→ klasyfikacja
+→ wybór akcji
+→ symulowane wykonanie akcji
+→ odpowiedź API
+
+Przykład:
+
+"Mam pilny problem z fakturą za ostatni miesiąc."
+→ FINANCE
+→ HIGH
+→ CREATE_FINANCE_TICKET
+→ symulowane zgłoszenie do działu finansów
 
 ## Technologie
 
@@ -58,6 +87,9 @@ etap1/
 │   ├── classifier.py
 │   ├── ai_classifier.py
 │   ├── agent_router.py
+│   ├── action_agent.py
+│   ├── action_executor.py
+│   ├── process_service.py
 │   ├── config.py
 │   ├── exceptions.py
 │   └── logging_config.py
@@ -65,6 +97,10 @@ etap1/
 │   ├── test_main.py
 │   ├── test_classifier.py
 │   ├── test_ai_classifier.py
+│   ├── test_action_agent.py
+│   ├── test_action_executor.py
+│   ├── test_process_api.py
+│   ├── test_process_service.py
 │   └── test_agent_router.py
 ├── Dockerfile
 ├── docker-compose.yml
@@ -79,11 +115,14 @@ Poniżej schemat pokazujący przepływ danych w backendzie AI Classifier:
 
 ![Diagram AI Classifier Backend](a_full_page_screenshot_image_of_a_readme_style_d.png)
 
-- FastAPI Backend przyjmuje requesty HTTP
-- AI Classifier / Rule-based logic klasyfikuje wiadomości
-- Endpoint `/classify` zwraca JSON z kategorią, priorytetem i podsumowaniem
-- Middleware i logowanie monitorują działania
-- Testy jednostkowe sprawdzają poprawność działania
+- FastAPI Backend przyjmuje requesty HTTP.
+- Endpoint `/classify` klasyfikuje wiadomość.
+- Endpoint `/process` klasyfikuje wiadomość i uruchamia symulowaną akcję.
+- Agent Router wybiera, czy użyć klasyfikatora AI, czy regułowego.
+- Action Agent wybiera dalszą akcję na podstawie kategorii i priorytetu.
+- Action Executor symuluje wykonanie wybranej akcji.
+- Middleware i logowanie monitorują requesty.
+- Testy automatyczne sprawdzają poprawność działania aplikacji.
 ---
 
 ## Uruchamianie lokalne bez Dockera
@@ -297,12 +336,15 @@ Projekt posiada testy sprawdzające między innymi:
 - klasyfikację regułową,
 - obsługę klasyfikacji AI,
 - obsługę błędnej odpowiedzi AI,
-- routing między klasyfikatorem regułowym i AI.
+- routing między klasyfikatorem regułowym i AI
+- wybór akcji po klasyfikacji,
+- symulowane wykonanie akcji,
+- pełny proces `/process`.
 
 Poprawny wynik testów powinien wyglądać podobnie do:
 
 ```text
-16 passed
+30 passed
 ```
 
 ---
@@ -360,6 +402,72 @@ Przykładowa odpowiedź:
   "source": "RULE_BASED"
 }
 ```
+---
+
+### POST /process
+
+Endpoint do przetwarzania wiadomości przez prostego agenta.
+
+Ten endpoint:
+
+1. przyjmuje tekst wiadomości,
+2. klasyfikuje wiadomość,
+3. wybiera odpowiednią akcję,
+4. symuluje wykonanie akcji,
+5. zwraca pełną odpowiedź z polem `executed_action`.
+
+
+Przykładowe zapytanie:
+
+```json
+{
+  "text": "Mam pilny problem z fakturą za ostatni miesiąc."
+}
+```
+Przykładowa odpowiedź:
+```json
+{
+  "category": "FINANCE",
+  "priority": "HIGH",
+  "summary": "Mam pilny problem z fakturą za ostatni miesiąc.",
+  "suggested_action": "Przekazać do działu finansów.",
+  "source": "RULE_BASED",
+  "executed_action": {
+    "action_type": "CREATE_FINANCE_TICKET",
+    "target_department": "FINANCE",
+    "status": "SIMULATED",
+    "message": "Utworzono symulowane zgłoszenie do działu finansów."
+  }
+}
+```
+
+---
+
+## Przykładowe akcje biznesowe
+
+W obecnej wersji akcje są symulowane.
+
+To znaczy, że backend nie tworzy jeszcze prawdziwego zgłoszenia w zewnętrznym systemie, ale pokazuje, jaka akcja zostałaby wykonana.
+
+Przykładowe mapowanie:
+
+```text
+FINANCE + HIGH/MEDIUM → CREATE_FINANCE_TICKET
+IT_SUPPORT + HIGH/MEDIUM → CREATE_IT_TICKET
+HR + HIGH/MEDIUM → CREATE_HR_CASE
+LOW → MARK_AS_LOW_PRIORITY
+OTHER + HIGH → ESCALATE_TO_MANAGER
+OTHER + MEDIUM → SEND_TO_GENERAL_QUEUE
+```
+W przyszłości w miejscu symulacji można podłączyć prawdziwe systemy, np.:
+
+Jira,
+CRM,
+Helpdesk,
+e-mail,
+Slack,
+Microsoft Teams,
+bazę danych.
 
 ---
 
@@ -461,6 +569,9 @@ Projekt posiada:
 - endpoint `/`,
 - endpoint `/health`,
 - endpoint `/classify`,
+- endpoint `/process`,
+- wybór akcji po klasyfikacji,
+- symulowane wykonanie akcji,
 - klasyfikator regułowy,
 - obsługę klasyfikatora AI,
 - obsługę błędów AI,
@@ -473,7 +584,7 @@ Projekt posiada:
 Aktualny stan testów:
 
 ```text
-16 passed
+30 passed
 ```
 
 ---
@@ -483,14 +594,15 @@ Aktualny stan testów:
 Następny logiczny etap to:
 
 ```text
-Etap 1.9 — przygotowanie projektu pod portfolio i prezentację techniczną
+Etap 3 — zapis historii zgłoszeń do bazy danych
 ```
 
 W tym etapie można przygotować:
 
-- opis projektu po polsku i angielsku,
-- krótką sekcję „Business use case”,
-- opis architektury,
-- screeny z działania aplikacji,
-- przykładowe requesty i response,
-- finalny commit kończący Etap 1.
+- bazę danych,
+- zapisywanie każdego zgłoszenia,
+- historię klasyfikacji,
+- historię wykonanych akcji,
+- endpoint do pobierania zgłoszeń,
+- możliwość filtrowania po kategorii, priorytecie i statusie,
+- przygotowanie projektu pod realne integracje biznesowe.
