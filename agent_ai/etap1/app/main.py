@@ -1,7 +1,9 @@
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from app.database import Base, engine, get_db
+import app.models
 from app.repositories import get_ticket_history, save_ticket_history
 
 
@@ -31,10 +33,9 @@ app = FastAPI(
 
 Base.metadata.create_all(bind=engine)
 
-app.add_exception_handler(RequestValidationError, validation_error_handler)
-
 app.add_middleware(RequestLoggingMiddleware)
 
+app.add_exception_handler(RequestValidationError, validation_error_handler)
 app.add_exception_handler(AppError, app_error_handler)
 app.add_exception_handler(Exception, generic_error_handler)
 
@@ -46,13 +47,31 @@ def root():
 
 @app.get("/health")
 def health_check():
+    database_dialect = engine.dialect.name
+    database_name = None
+
+    try:
+        with engine.connect() as connection:
+            if database_dialect == "mysql":
+                result = connection.execute(text("SELECT DATABASE();"))
+                database_name = result.scalar()
+            elif database_dialect == "sqlite":
+                database_name = "tickets.db"
+            else:
+                database_name = "unknown"
+    except Exception as error:
+        database_name = f"database check error: {error}"
+
     return {
         "status": "ok",
         "app_name": settings.app_name,
         "version": settings.app_version,
         "environment": settings.environment,
         "ai_enabled": settings.ai_enabled,
+        "database": database_name,
+        "dialect": database_dialect,
     }
+
 
 @app.post("/classify", response_model=ClassificationResponse)
 def classify_message(
