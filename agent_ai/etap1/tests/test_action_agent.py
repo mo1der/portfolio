@@ -41,7 +41,7 @@ def test_choose_action_for_it_support():
 
     result = choose_action(classification)
 
-    assert result == ActionType.CREATE_IT_TICKET
+    assert result == ActionType.CREATE_IT_SUPPORT_TICKET
 
 
 def test_choose_action_for_hr():
@@ -55,7 +55,7 @@ def test_choose_action_for_hr():
 
     result = choose_action(classification)
 
-    assert result == ActionType.CREATE_HR_CASE
+    assert result == ActionType.CREATE_HR_TICKET
 
 def test_choose_action_for_other_high_priority():
     classification = ClassificationResponse(

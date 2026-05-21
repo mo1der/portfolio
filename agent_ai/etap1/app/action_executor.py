@@ -10,7 +10,7 @@ def execute_action(action_type: ActionType) -> ActionResult:
             message="Utworzono symulowane zgłoszenie do działu finansów.",
         )
 
-    if action_type == ActionType.CREATE_IT_TICKET:
+    if action_type == ActionType.CREATE_IT_SUPPORT_TICKET:
         return ActionResult(
             action_type=action_type,
             target_department=Category.IT_SUPPORT,
@@ -18,7 +18,7 @@ def execute_action(action_type: ActionType) -> ActionResult:
             message="Utworzono symulowane zgłoszenie do działu IT.",
         )
 
-    if action_type == ActionType.CREATE_HR_CASE:
+    if action_type == ActionType.CREATE_HR_TICKET:
         return ActionResult(
             action_type=action_type,
             target_department=Category.HR,

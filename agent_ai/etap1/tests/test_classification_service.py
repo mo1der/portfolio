@@ -1,63 +1,46 @@
-from unittest.mock import patch
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import text
 
-from app.classification_service import classify_message
-from app.schemas import ClassificationResponse
+from app.main import app
+from app.database import engine
 
-
-@patch("app.classification_service.classify_text_with_ai")
-def test_classify_message_uses_ai_when_ai_succeeds(mock_ai):
-    mock_ai.return_value = ClassificationResponse(
-        category="IT_SUPPORT",
-        priority="HIGH",
-        summary="Problem z laptopem",
-        suggested_action="Przekazać do IT",
-        source="AI",
-    )
-
-    result = classify_message("Laptop nie działa")
-
-    assert result.category == "IT_SUPPORT"
-    assert result.source == "AI"
+client = TestClient(app)
 
 
-@patch("app.classification_service.classify_text_with_ai")
-@patch("app.classification_service.classify_text")
-def test_classify_message_uses_fallback_when_ai_fails(mock_fallback, mock_ai):
-    mock_ai.side_effect = Exception("AI error")
-    mock_fallback.return_value = ClassificationResponse(
-        category="OTHER",
-        priority="LOW",
-        summary="Fallback summary",
-        suggested_action="Review manually",
-        source="RULE_BASED",
-    )
-
-    result = classify_message("Jakiś tekst")
-
-    assert result.source == "RULE_BASED"
-    mock_fallback.assert_called_once_with("Jakiś tekst")
+def delete_test_tickets():
+    """
+    Usuwa tylko rekordy testowe.
+    Nie rusza prawdziwej historii zgłoszeń.
+    """
+    with engine.begin() as connection:
+        connection.execute(
+            text("DELETE FROM ticket_history WHERE input_text LIKE 'TEST_%'")
+        )
 
 
-@patch("app.classification_service.settings")
-@patch("app.classification_service.classify_text_with_ai")
-@patch("app.classification_service.classify_text")
-def test_classify_message_uses_fallback_when_ai_disabled(
-    mock_fallback,
-    mock_ai,
-    mock_settings,
-):
-    mock_settings.ai_enabled = False
-    mock_fallback.return_value = ClassificationResponse(
-        category="FINANCE",
-        priority="LOW",
-        summary="Problem z fakturą",
-        suggested_action="Przekazać do działu finansów",
-        source="RULE_BASED",
-    )
+@pytest.mark.parametrize(
+    "text,expected_agent",
+    [
+        ("Mam problem z fakturą", "finance_invoice_agent"),
+        ("Nie mogę zalogować się do VPN", "it_access_agent"),
+        ("Chcę złożyć wniosek urlopowy", "hr_leave_agent"),
+        ("Pytanie ogólne do systemu", "general_agent"),
+    ],
+)
+def test_classify_routing(text, expected_agent):
+    input_text = f"TEST_{text}"
 
-    result = classify_message("Problem z fakturą")
+    try:
+        response = client.post("/classify", json={"text": input_text})
 
-    assert result.source == "RULE_BASED"
-    assert result.category == "FINANCE"
-    mock_ai.assert_not_called()
-    mock_fallback.assert_called_once_with("Problem z fakturą")
+        assert response.status_code == 200
+
+        data = response.json()
+
+        assert "route" in data
+        assert data["route"]["agent_name"] == expected_agent
+        assert data["summary"] == input_text
+
+    finally:
+        delete_test_tickets()

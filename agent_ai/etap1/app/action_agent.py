@@ -9,10 +9,10 @@ def choose_action(classification: ClassificationResponse) -> ActionType:
         return ActionType.CREATE_FINANCE_TICKET
 
     if classification.category == Category.IT_SUPPORT:
-        return ActionType.CREATE_IT_TICKET
+        return ActionType.CREATE_IT_SUPPORT_TICKET
 
     if classification.category == Category.HR:
-        return ActionType.CREATE_HR_CASE
+        return ActionType.CREATE_HR_TICKET
 
     if classification.priority == Priority.HIGH:
         return ActionType.ESCALATE_TO_MANAGER

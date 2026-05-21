@@ -12,18 +12,18 @@ def test_execute_finance_ticket_action():
 
 
 def test_execute_it_ticket_action():
-    result = execute_action(ActionType.CREATE_IT_TICKET)
+    result = execute_action(ActionType.CREATE_IT_SUPPORT_TICKET)
 
-    assert result.action_type == ActionType.CREATE_IT_TICKET
+    assert result.action_type == ActionType.CREATE_IT_SUPPORT_TICKET
     assert result.target_department == Category.IT_SUPPORT
     assert result.status == ActionStatus.SIMULATED
     assert "IT" in result.message
 
 
 def test_execute_hr_case_action():
-    result = execute_action(ActionType.CREATE_HR_CASE)
+    result = execute_action(ActionType.CREATE_HR_TICKET)
 
-    assert result.action_type == ActionType.CREATE_HR_CASE
+    assert result.action_type == ActionType.CREATE_HR_TICKET
     assert result.target_department == Category.HR
     assert result.status == ActionStatus.SIMULATED
     assert "HR" in result.message

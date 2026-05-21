@@ -1,21 +1,22 @@
-from app.ai_classifier import classify_text_with_ai
-from app.classifier import classify_text
-from app.logger import logger
-from app.schemas import ClassificationResponse
-from app.core.settings import settings
+from app.schemas import ClassificationResponse, ProcessResponse, ExecutedAction
+from app.agent_router import route_message
 
+def build_process_response(category, priority, summary, suggested_action, source, text) -> ProcessResponse:
+    route = route_message(category, text)
 
+    # tworzymy symulowaną akcję dla RULE_BASED lub AI
+    executed_action = ExecutedAction(
+        action_type=f"CREATE_{category}_TICKET",
+        status="SIMULATED",
+        message=f"Utworzono symulowane zgłoszenie do działu {category}."
+    )
 
-def classify_message(text: str) -> ClassificationResponse:
-    if not settings.ai_enabled:
-        logger.info("AI classifier disabled, using fallback")
-        return classify_text(text)
-
-    try:
-        logger.info("Trying AI classifier")
-        result = classify_text_with_ai(text)
-        logger.info("AI classifier succeeded")
-        return result
-    except Exception as e:
-        logger.warning(f"AI classifier failed, using fallback. Error: {repr(e)}")
-        return classify_text(text)
+    return ProcessResponse(
+        category=category,
+        priority=priority,
+        summary=summary,
+        suggested_action=suggested_action,
+        source=source,
+        route=route,
+        executed_action=executed_action
+    )

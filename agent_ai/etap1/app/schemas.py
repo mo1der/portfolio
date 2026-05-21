@@ -3,6 +3,12 @@ from enum import Enum
 
 from pydantic import BaseModel, Field, field_validator
 
+from typing import Optional
+
+class ExecutedAction(BaseModel):
+    action_type: str
+    status: str
+    message: str
 
 class Category(str, Enum):
     IT_SUPPORT = "IT_SUPPORT"
@@ -19,8 +25,9 @@ class Priority(str, Enum):
 
 class ActionType(str, Enum):
     CREATE_FINANCE_TICKET = "CREATE_FINANCE_TICKET"
-    CREATE_IT_TICKET = "CREATE_IT_TICKET"
-    CREATE_HR_CASE = "CREATE_HR_CASE"
+    CREATE_IT_SUPPORT_TICKET = "CREATE_IT_SUPPORT_TICKET"
+    CREATE_HR_TICKET = "CREATE_HR_TICKET"
+    CREATE_OTHER_TICKET = "CREATE_OTHER_TICKET"
     MARK_AS_LOW_PRIORITY = "MARK_AS_LOW_PRIORITY"
     SEND_TO_GENERAL_QUEUE = "SEND_TO_GENERAL_QUEUE"
     ESCALATE_TO_MANAGER = "ESCALATE_TO_MANAGER"
@@ -43,12 +50,20 @@ class ClassificationRequest(BaseModel):
         return value
 
 
+class RouteDecision(BaseModel):
+    agent_name: str
+    department: Category
+    reason: str
+    action_type: ActionType
+
+
 class ClassificationResponse(BaseModel):
     category: Category
     priority: Priority
     summary: str
     suggested_action: str
     source: str
+    route: RouteDecision | None = None  # nowy atrybut
 
 
 class ActionResult(BaseModel):
@@ -64,7 +79,9 @@ class ProcessResponse(BaseModel):
     summary: str
     suggested_action: str
     source: str
+    route: RouteDecision | None = None  # podpinamy do response
     executed_action: ActionResult
+
 
 class TicketHistoryResponse(BaseModel):
     id: int

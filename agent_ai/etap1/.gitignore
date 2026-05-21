@@ -1,8 +1,11 @@
 venv/
-__pycache__/
+
 .pytest_cache/
-*.pyc
 .env
 .idea/
 .env.example
-tickets.db
+
+*.db
+*.pyc
+
+__pycache__/
