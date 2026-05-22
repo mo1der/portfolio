@@ -1,12 +1,4 @@
-from fastapi.testclient import TestClient
-
-from app.main import app
-
-
-client = TestClient(app)
-
-
-def test_health_check():
+def test_health_check(client):
     response = client.get("/health")
 
     assert response.status_code == 200
@@ -14,7 +6,7 @@ def test_health_check():
     data = response.json()
 
     assert data["status"] == "ok"
-    assert data["app_name"] == "AI Classifier Backend"
+    assert data["app_name"] == "AI Classifier Backend Test"
     assert data["version"] == "1.5.0"
-    assert data["environment"] == "development"
-    assert data["ai_enabled"] is True
+    assert data["environment"] == "test"
+    assert data["ai_enabled"] is False

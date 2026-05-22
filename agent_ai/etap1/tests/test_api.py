@@ -1,18 +1,11 @@
-from fastapi.testclient import TestClient
-
-from app.main import app
-
-
-client = TestClient(app)
-
-
-def test_health_endpoint():
+def test_health_endpoint(client):
     response = client.get("/health")
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
 
-def test_classify_rejects_empty_text():
+
+def test_classify_rejects_empty_text(client):
     response = client.post(
         "/classify",
         json={"text": ""},
@@ -26,7 +19,8 @@ def test_classify_rejects_empty_text():
     assert data["message"] == "Invalid request data"
     assert data["details"][0]["field"] == "text"
 
-def test_classify_rejects_blank_text():
+
+def test_classify_rejects_blank_text(client):
     response = client.post(
         "/classify",
         json={"text": "     "},

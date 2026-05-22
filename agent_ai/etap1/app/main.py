@@ -1,54 +1,54 @@
 from fastapi import FastAPI, Depends, Query
+from fastapi.exceptions import RequestValidationError
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import datetime, timedelta
 import pandas as pd
+
 from app.database import Base, engine, get_db
 import app.models
 from app.repositories import get_ticket_history, save_ticket_history
-from fastapi.exceptions import RequestValidationError
-
 from app.agent_router import route_message
-from app.response_builders import build_process_response  # builder do ProcessResponse
-
+from app.response_builders import build_process_response
 from app.schemas import ClassificationRequest, ProcessResponse, TicketHistoryResponse
-
 from app.classifier import classify_text_rule_based
 from app.ai_classifier import classify_text_with_ai
-
 from app.core.settings import settings
 from app.error_handlers import app_error_handler, generic_error_handler, validation_error_handler
 from app.exceptions import AppError
 from app.middleware import RequestLoggingMiddleware
 
+# FastAPI app
 app = FastAPI(title=settings.app_name, version=settings.app_version)
 
 # Tworzymy wszystkie tabele w bazie (jeśli nie istnieją)
 Base.metadata.create_all(bind=engine)
 
-# Middleware do logowania requestów
+# Middleware
 app.add_middleware(RequestLoggingMiddleware)
 
-# Rejestracja obsługi wyjątków
+# Exception handlers
 app.add_exception_handler(RequestValidationError, validation_error_handler)
 app.add_exception_handler(AppError, app_error_handler)
 app.add_exception_handler(Exception, generic_error_handler)
 
 # -----------------------------
-# Wybór trybu AI lub rule-based
-USE_AI = False  # True = AI, False = rule-based
+# AI flag (w testach można patchować classify_text_with_ai)
+USE_AI = settings.ai_enabled
 # -----------------------------
 
 def classify_text(text: str) -> dict:
+    """Wybór AI lub rule-based"""
     return classify_text_with_ai(text) if USE_AI else classify_text_rule_based(text)
 
 # -----------------------------
-# Endpoint root
+# Root endpoint
 @app.get("/")
 def root():
     return {"message": "AI Classifier Backend działa"}
 
-# Endpoint health check
+# -----------------------------
+# Health check
 @app.get("/health")
 def health_check():
     database_dialect = engine.dialect.name
@@ -59,7 +59,7 @@ def health_check():
                 result = connection.execute(text("SELECT DATABASE();"))
                 database_name = result.scalar()
             elif database_dialect == "sqlite":
-                database_name = "tickets.db"
+                database_name = settings.database_url.split("/")[-1]  # np. ai_classifier_test.db
             else:
                 database_name = "unknown"
     except Exception as error:
@@ -84,10 +84,10 @@ def classify_message(
 ):
     text = request.text
 
-    # 1️⃣ Klasyfikacja przy użyciu AI lub rule-based
+    # Klasyfikacja
     classification = classify_text(text)
 
-    # 2️⃣ Tworzymy pełną odpowiedź z executed_action i route
+    # Odpowiedź
     response = build_process_response(
         category=classification["category"].value if hasattr(classification["category"], "value") else classification["category"],
         priority=classification["priority"].value if hasattr(classification["priority"], "value") else classification["priority"],
@@ -97,28 +97,22 @@ def classify_message(
         text=text
     )
 
-    # 3️⃣ Zapis do bazy
-    save_ticket_history(
-        db=db,
-        input_text=text,
-        classification=response
-    )
-
+    # Zapis do bazy
+    save_ticket_history(db=db, input_text=text, classification=response)
     return response
 
 # -----------------------------
-# Endpoint /process (do symulacji workflow)
+# Endpoint /process
 @app.post("/process", response_model=ProcessResponse)
 def process(request: ClassificationRequest, db: Session = Depends(get_db)):
     text = request.text
-
     classification = classify_text(text)
     category = classification["category"]
 
     # Routing decyzji agenta
     route = route_message(category, text)
 
-    # Symulacja wykonanej akcji
+    # Symulacja akcji
     executed_action = {
         "action_type": route.action_type,
         "target_department": route.department,
@@ -136,23 +130,17 @@ def process(request: ClassificationRequest, db: Session = Depends(get_db)):
         executed_action=executed_action
     )
 
-    save_ticket_history(
-        db=db,
-        input_text=text,
-        classification=response
-    )
-
+    save_ticket_history(db=db, input_text=text, classification=response)
     return response
 
 # -----------------------------
-# Endpoint /tickets – lista historii zgłoszeń
+# Endpoint /tickets
 @app.get("/tickets", response_model=list[TicketHistoryResponse])
 def read_ticket_history(db: Session = Depends(get_db)):
     return get_ticket_history(db)
 
 # -----------------------------
-# Nowy endpoint /stats
-# -----------------------------
+# Endpoint /stats
 @app.get("/stats")
 def ticket_stats(days: int = Query(30, description="Ilość dni do wstecznej analizy"), db: Session = Depends(get_db)):
     query = "SELECT * FROM ticket_history"

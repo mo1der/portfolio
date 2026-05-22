@@ -1,50 +1,44 @@
-import os
-
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+from app.core.settings import settings
 
-load_dotenv()
-
+# Bazowy URL SQLite awaryjny
 DEFAULT_SQLITE_URL = "sqlite:///./tickets.db"
 
-DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_SQLITE_URL)
-
+# Pobieramy URL bazy z settings
+DATABASE_URL = settings.database_url or DEFAULT_SQLITE_URL
 
 def create_database_engine():
     """
     Tworzy połączenie do bazy danych.
-
-    Najpierw próbuje użyć DATABASE_URL z pliku .env.
-    Jeśli MySQL nie działa albo połączenie się nie uda,
-    aplikacja przechodzi awaryjnie na SQLite.
+    - Testy: używają osobnej bazy SQLite z settings.database_url
+    - Produkcja / development: MySQL / PostgreSQL lub SQLite
     """
-
+    # SQLite wymaga connect_args
     if DATABASE_URL.startswith("sqlite"):
-        print("Używam SQLite.")
+        print(f"Używam SQLite ({DATABASE_URL})")
         return create_engine(
             DATABASE_URL,
             connect_args={"check_same_thread": False},
         )
 
+    # Inne bazy (MySQL/PostgreSQL)
     try:
         engine = create_engine(DATABASE_URL)
-
+        # Sprawdzenie połączenia
         with engine.connect():
             pass
-
         print(f"Połączono z bazą: {DATABASE_URL}")
         return engine
 
     except Exception as error:
-        print(f"Nie udało się połączyć z MySQL. Przechodzę na SQLite. Błąd: {error}")
-
+        print(f"Nie udało się połączyć z bazą. Przechodzę na SQLite. Błąd: {error}")
         return create_engine(
             DEFAULT_SQLITE_URL,
             connect_args={"check_same_thread": False},
         )
 
-
+# --- Engine i sesje ---
 engine = create_database_engine()
 
 SessionLocal = sessionmaker(
@@ -55,10 +49,9 @@ SessionLocal = sessionmaker(
 
 Base = declarative_base()
 
-
+# --- Dependency dla FastAPI ---
 def get_db():
     db = SessionLocal()
-
     try:
         yield db
     finally:
