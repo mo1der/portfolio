@@ -39,7 +39,14 @@ USE_AI = settings.ai_enabled
 
 def classify_text(text: str) -> dict:
     """Wybór AI lub rule-based"""
-    return classify_text_with_ai(text) if USE_AI else classify_text_rule_based(text)
+    if not USE_AI:
+        return classify_text_rule_based(text)
+
+    try:
+        return classify_text_with_ai(text)
+    except Exception as error:
+        print(f"AI classifier failed, using rule-based fallback. Error: {error}")
+        return classify_text_rule_based(text)
 
 # -----------------------------
 # Root endpoint
