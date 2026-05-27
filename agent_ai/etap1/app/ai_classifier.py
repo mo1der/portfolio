@@ -48,6 +48,8 @@ Wiadomość:
     content = response.choices[0].message.content
 
     try:
-        return json.loads(content)
+        result = json.loads(content)
+        result["source"] = "AI"
+        return result
     except json.JSONDecodeError:
         raise RuntimeError("AI zwróciło niepoprawny JSON")

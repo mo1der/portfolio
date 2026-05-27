@@ -18,6 +18,8 @@ from app.error_handlers import app_error_handler, generic_error_handler, validat
 from app.exceptions import AppError
 from app.middleware import RequestLoggingMiddleware
 
+from scripts.sync_sqlite_to_mysql import sync
+
 # FastAPI app
 app = FastAPI(title=settings.app_name, version=settings.app_version)
 
@@ -169,3 +171,37 @@ def ticket_stats(days: int = Query(30, description="Ilość dni do wstecznej ana
         "total_tickets": len(df_filtered)
     }
     return stats
+
+# -----------------------------
+# Endpoint /sync/sqlite-to-mysql
+# -----------------------------
+@app.post("/sync/sqlite-to-mysql")
+def sync_sqlite_to_mysql():
+    """
+    Ręczna synchronizacja danych z awaryjnej SQLite ai_classifier.db do MySQL.
+
+    Używane po sytuacji awaryjnej:
+    - MySQL nie działał,
+    - aplikacja zapisała zgłoszenia do ai_classifier.db,
+    - MySQL wrócił,
+    - uruchamiamy synchronizację.
+    """
+    try:
+        result = sync()
+
+        if result is None:
+            return {
+                "status": "completed",
+                "message": "Synchronizacja została uruchomiona. Szczegóły sprawdź w logach serwera.",
+            }
+
+        return {
+            "status": "completed",
+            "result": result,
+        }
+
+    except Exception as error:
+        return {
+            "status": "failed",
+            "message": str(error),
+        }

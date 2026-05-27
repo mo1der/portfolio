@@ -3,7 +3,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from app.core.settings import settings
 
 # Bazowy URL SQLite awaryjny
-DEFAULT_SQLITE_URL = "sqlite:///./tickets.db"
+DEFAULT_SQLITE_URL = "sqlite:///./ai_classifier.db"
 
 # Pobieramy URL bazy z settings
 DATABASE_URL = settings.database_url or DEFAULT_SQLITE_URL
@@ -28,11 +28,13 @@ def create_database_engine():
         # Sprawdzenie połączenia
         with engine.connect():
             pass
+
         print(f"Połączono z bazą: {DATABASE_URL}")
         return engine
 
     except Exception as error:
         print(f"Nie udało się połączyć z bazą. Przechodzę na SQLite. Błąd: {error}")
+
         return create_engine(
             DEFAULT_SQLITE_URL,
             connect_args={"check_same_thread": False},
@@ -52,6 +54,7 @@ Base = declarative_base()
 # --- Dependency dla FastAPI ---
 def get_db():
     db = SessionLocal()
+
     try:
         yield db
     finally:

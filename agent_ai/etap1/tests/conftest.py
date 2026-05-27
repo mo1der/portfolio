@@ -1,12 +1,15 @@
 import os
 
+# Ustawiamy środowisko testowe ZANIM zaimportujemy app.main i app.database.
+# Dzięki temu testy zawsze używają SQLite i nie wywołują OpenAI.
+os.environ["ENVIRONMENT"] = "test"
+os.environ["AI_ENABLED"] = "false"
+os.environ["DATABASE_URL"] = "sqlite:///./ai_classifier_test.db"
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
-# Ustawiamy środowisko testowe ZANIM zaimportujemy app.main i app.database
-os.environ["ENVIRONMENT"] = "test"
 
 from app.core.settings import Settings
 from app.database import Base, get_db

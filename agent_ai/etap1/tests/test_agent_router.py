@@ -14,7 +14,7 @@ from app.schemas import Category, ActionType
         (Category.HR, "Chcę złożyć wniosek urlopowy", "hr_leave_agent", ActionType.CREATE_HR_TICKET),
         (Category.HR, "Zwolnienie lekarskie na przyszły tydzień", "hr_leave_agent", ActionType.CREATE_HR_TICKET),
         (Category.OTHER, "Mam pytanie ogólne", "general_agent", ActionType.SEND_TO_GENERAL_QUEUE),
-        (Category.FINANCE, "Nie wiem co zrobić", "general_agent", ActionType.SEND_TO_GENERAL_QUEUE)
+        (Category.FINANCE, "Nie wiem co zrobić", "finance_invoice_agent", ActionType.CREATE_FINANCE_TICKET),
     ]
 )
 def test_routing(category, text, expected_agent, expected_action):

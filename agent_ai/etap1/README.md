@@ -1,6 +1,6 @@
 # AI Classifier Backend
 
-Backend API do klasyfikowania zgłoszeń tekstowych, routingu do odpowiednich agentów oraz symulowanego wykonywania akcji biznesowych.
+Backend API do klasyfikowania zgłoszeń tekstowych, routingu do odpowiednich agentów, zapisu historii zgłoszeń oraz symulowanego wykonywania akcji biznesowych.
 
 Projekt jest częścią nauki budowania backendów i agentów AI, które mogą być używane w firmach do automatyzacji obsługi zgłoszeń, wiadomości lub prostych procesów biznesowych.
 
@@ -8,10 +8,12 @@ Projekt jest częścią nauki budowania backendów i agentów AI, które mogą b
 
 ## Aktualny status projektu
 
-Aktualnie ukończony jest:
+Aktualnie ukończone są etapy:
 
 ```text
-Etap 5 — Rozbudowa logiki agentów i routingu zgłoszeń
+Etap 1–5 — podstawowy backend, klasyfikacja, baza danych, routing agentów i akcje
+Etap 6 — statystyki zgłoszeń
+Etap 7 — osobna konfiguracja dla testów i aplikacji
 ```
 
 Aktualny wynik testów:
@@ -27,7 +29,12 @@ Projekt posiada już:
 - routing zgłoszeń do agentów,
 - symulowane wykonanie akcji,
 - zapis historii zgłoszeń do bazy danych,
+- endpoint historii zgłoszeń,
+- endpoint statystyk zgłoszeń,
 - obsługę SQLite / MySQL,
+- osobną konfigurację dla testów i normalnego uruchomienia,
+- testową bazę SQLite,
+- awaryjny fallback do SQLite, gdy MySQL jest niedostępny,
 - opcjonalny klasyfikator AI,
 - testy automatyczne,
 - Dockerfile,
@@ -45,9 +52,11 @@ Aplikacja przyjmuje tekst zgłoszenia i zwraca informację:
 - jakie jest podsumowanie wiadomości,
 - jaka akcja jest sugerowana,
 - jakie jest źródło klasyfikacji,
-- do jakiego agenta zgłoszenie powinno trafić.
+- do jakiego agenta zgłoszenie powinno trafić,
+- jaka akcja została zasymulowana,
+- czy zgłoszenie zostało zapisane w historii.
 
-Dodatkowo endpoint `/process` wykonuje pełny proces:
+Endpoint `/process` wykonuje pełny proces:
 
 ```text
 wiadomość użytkownika
@@ -82,9 +91,29 @@ Przykłady:
 
 ---
 
+## Priorytety zgłoszeń
+
+System obsługuje priorytety:
+
+```text
+LOW
+MEDIUM
+HIGH
+```
+
+Przykłady:
+
+| Treść | Priorytet |
+|---|---|
+| Mam pilny problem z fakturą. | HIGH |
+| Mam problem z logowaniem. | HIGH |
+| Mam pytanie ogólne. | LOW / MEDIUM |
+
+---
+
 ## Agenci i routing
 
-W Etapie 5 dodany został routing zgłoszeń do konkretnych agentów.
+System kieruje zgłoszenia do odpowiednich agentów.
 
 | Kategoria | Słowa kluczowe | Agent | Typ akcji |
 |---|---|---|---|
@@ -125,6 +154,12 @@ System zwraca:
     "department": "IT_SUPPORT",
     "reason": "Wiadomość dotyczy problemów IT.",
     "action_type": "CREATE_IT_TICKET"
+  },
+  "executed_action": {
+    "action_type": "CREATE_IT_TICKET",
+    "target_department": "IT_SUPPORT",
+    "status": "SIMULATED",
+    "message": "Utworzono symulowane zgłoszenie do działu IT_SUPPORT."
   }
 }
 ```
@@ -139,8 +174,10 @@ Projekt używa:
 - FastAPI
 - Uvicorn
 - Pydantic
+- pydantic-settings
 - SQLAlchemy
-- SQLite / MySQL
+- SQLite
+- MySQL
 - PyMySQL
 - Pytest
 - OpenAI SDK
@@ -169,6 +206,7 @@ etap1/
 │   ├── database.py
 │   ├── models.py
 │   ├── repositories.py
+│   ├── response_builders.py
 │   ├── middleware.py
 │   ├── error_handlers.py
 │   ├── exceptions.py
@@ -178,6 +216,7 @@ etap1/
 │       └── settings.py
 │
 ├── tests/
+│   ├── conftest.py
 │   ├── test_action_agent.py
 │   ├── test_action_executor.py
 │   ├── test_agent_router.py
@@ -206,13 +245,16 @@ etap1/
 
 ## Diagram architektury
 
-Poniżej przykładowy przepływ danych w backendzie:
-
 ```text
 Użytkownik
    |
    v
 FastAPI Backend
+   |
+   |-- GET /health
+   |       |
+   |       v
+   |   Status aplikacji + informacja o bazie
    |
    |-- POST /classify
    |       |
@@ -223,27 +265,34 @@ FastAPI Backend
    |   Agent Router
    |       |
    |       v
-   |   RouteDecision
+   |   ProcessResponse
    |       |
    |       v
    |   Zapis historii w bazie
    |
    |-- POST /process
+   |       |
+   |       v
+   |   Rule-based classifier / AI classifier
+   |       |
+   |       v
+   |   Agent Router
+   |       |
+   |       v
+   |   Symulowana akcja
+   |       |
+   |       v
+   |   Zapis historii w bazie
+   |
+   |-- GET /tickets
+   |       |
+   |       v
+   |   Lista zapisanych zgłoszeń
+   |
+   |-- GET /stats
            |
            v
-       Rule-based classifier / AI classifier
-           |
-           v
-       Agent Router
-           |
-           v
-       Action Executor
-           |
-           v
-       executed_action
-           |
-           v
-       Zapis historii w bazie
+       Statystyki zgłoszeń
 ```
 
 ---
@@ -261,6 +310,46 @@ Zawiera endpointy:
 - `POST /classify`
 - `POST /process`
 - `GET /tickets`
+- `GET /stats`
+
+---
+
+### `app/core/settings.py`
+
+Centralna konfiguracja aplikacji.
+
+Odpowiada za wczytywanie ustawień z plików środowiskowych:
+
+- `.env` — normalne uruchomienie aplikacji,
+- `.env.test` — środowisko testowe.
+
+Testy dodatkowo wymuszają tryb testowy w `tests/conftest.py`, więc nie trzeba ręcznie wpisywać:
+
+```powershell
+$env:ENVIRONMENT="test"
+```
+
+przed uruchomieniem pytest.
+
+---
+
+### `app/database.py`
+
+Konfiguracja połączenia z bazą danych.
+
+Aplikacja może działać z:
+
+- MySQL,
+- SQLite,
+- awaryjnym fallbackiem do SQLite.
+
+Główna zasada:
+
+```text
+normalna aplikacja → MySQL z .env
+testy → SQLite testowa ai_classifier_test.db
+awaria MySQL → SQLite awaryjna ai_classifier.db
+```
 
 ---
 
@@ -288,19 +377,13 @@ IT_SUPPORT
 
 Opcjonalny klasyfikator AI oparty o OpenAI API.
 
-Może być użyty zamiast klasyfikatora regułowego.
+Może być użyty zamiast klasyfikatora regułowego, jeśli w konfiguracji ustawione jest:
 
-W `main.py` można przełączyć tryb:
-
-```python
-USE_AI = False
+```env
+AI_ENABLED=true
 ```
 
-lub:
-
-```python
-USE_AI = True
-```
+W środowisku testowym AI jest wyłączone, aby testy nie zużywały tokenów i nie zależały od zewnętrznego API.
 
 ---
 
@@ -308,7 +391,7 @@ USE_AI = True
 
 Wybiera konkretnego agenta na podstawie kategorii i treści zgłoszenia.
 
-Przykład:
+Przykłady:
 
 ```text
 IT_SUPPORT + logowanie → it_access_agent
@@ -346,6 +429,28 @@ Zawiera modele SQLAlchemy, czyli opis tabel w bazie danych.
 
 ---
 
+### `tests/conftest.py`
+
+Centralna konfiguracja testów.
+
+Odpowiada za:
+
+- automatyczne ustawienie środowiska testowego,
+- wymuszenie `AI_ENABLED=false`,
+- wymuszenie bazy `sqlite:///./ai_classifier_test.db`,
+- stworzenie testowego klienta FastAPI,
+- podmianę dependency `get_db`,
+- tworzenie i kasowanie tabel w testowej SQLite.
+
+Dzięki temu testy:
+
+- nie dotykają MySQL,
+- nie zużywają tokenów OpenAI,
+- nie zapisują danych do prawdziwej historii,
+- mogą być uruchamiane zwykłą komendą pytest.
+
+---
+
 ## Endpointy API
 
 ---
@@ -370,9 +475,9 @@ Przykładowa odpowiedź:
 
 Endpoint zdrowia aplikacji.
 
-Pokazuje status aplikacji, konfigurację i używaną bazę danych.
+Pokazuje status aplikacji, konfigurację i aktualnie używaną bazę danych.
 
-Przykładowa odpowiedź:
+Przykładowa odpowiedź dla MySQL:
 
 ```json
 {
@@ -383,6 +488,20 @@ Przykładowa odpowiedź:
   "ai_enabled": false,
   "database": "ai_classifier",
   "dialect": "mysql"
+}
+```
+
+Przykładowa odpowiedź dla SQLite testowej:
+
+```json
+{
+  "status": "ok",
+  "app_name": "AI Classifier Backend",
+  "version": "1.5.0",
+  "environment": "test",
+  "ai_enabled": false,
+  "database": "ai_classifier_test.db",
+  "dialect": "sqlite"
 }
 ```
 
@@ -414,6 +533,12 @@ Endpoint do klasyfikowania tekstu i wyboru agenta.
     "department": "IT_SUPPORT",
     "reason": "Wiadomość dotyczy problemów IT.",
     "action_type": "CREATE_IT_TICKET"
+  },
+  "executed_action": {
+    "action_type": "CREATE_IT_TICKET",
+    "target_department": "IT_SUPPORT",
+    "status": "SIMULATED",
+    "message": "Utworzono symulowane zgłoszenie do działu IT_SUPPORT."
   }
 }
 ```
@@ -517,6 +642,60 @@ Endpoint zwracający historię zgłoszeń z bazy danych.
 
 ---
 
+## `GET /stats`
+
+Endpoint zwracający statystyki zgłoszeń.
+
+Domyślnie analizuje ostatnie 30 dni.
+
+Przykład:
+
+```text
+GET /stats
+```
+
+Można też podać liczbę dni:
+
+```text
+GET /stats?days=7
+```
+
+Przykładowa odpowiedź:
+
+```json
+{
+  "count_by_category": {
+    "FINANCE": 5,
+    "IT_SUPPORT": 3,
+    "HR": 2
+  },
+  "count_by_priority": {
+    "HIGH": 6,
+    "MEDIUM": 3,
+    "LOW": 1
+  },
+  "count_by_status": {
+    "SIMULATED": 10
+  },
+  "top_agents": {
+    "finance_invoice_agent": 5,
+    "it_access_agent": 3,
+    "hr_leave_agent": 2
+  },
+  "total_tickets": 10
+}
+```
+
+Jeśli nie ma zgłoszeń w podanym okresie, endpoint zwróci komunikat:
+
+```json
+{
+  "message": "Brak zgłoszeń w ostatnich 30 dniach."
+}
+```
+
+---
+
 ## Typy akcji
 
 System obsługuje następujące typy akcji:
@@ -558,13 +737,21 @@ Projekt obsługuje bazę danych przez SQLAlchemy.
 
 Można korzystać z:
 
-- SQLite
-- MySQL
+- MySQL,
+- SQLite.
+
+Aktualny podział baz:
+
+| Tryb | Baza | Opis |
+|---|---|---|
+| Normalna aplikacja | MySQL `ai_classifier` | Główna baza historii zgłoszeń |
+| Testy | `ai_classifier_test.db` | Osobna baza SQLite tylko do testów |
+| Awaria MySQL | `ai_classifier.db` | Awaryjna lokalna baza SQLite |
 
 Przykładowy connection string dla MySQL:
 
 ```text
-mysql+pymysql://mo1der:sqlmo1der@localhost:3306/ai_classifier
+mysql+pymysql://user:password@localhost:3306/ai_classifier
 ```
 
 Historia zgłoszeń jest zapisywana w bazie i dostępna przez endpoint:
@@ -575,9 +762,37 @@ GET /tickets
 
 ---
 
+## Ważne: fallback SQLite a spójność danych
+
+Jeśli MySQL działa, aplikacja zapisuje historię do MySQL.
+
+Jeśli MySQL jest niedostępny, aplikacja może przejść awaryjnie na lokalną bazę SQLite:
+
+```text
+ai_classifier.db
+```
+
+Po powrocie MySQL nowe zgłoszenia znowu będą zapisywane do MySQL.
+
+Ważne:
+
+```text
+Dane zapisane awaryjnie w ai_classifier.db nie synchronizują się automatycznie z MySQL.
+```
+
+To oznacza, że fallback SQLite zapewnia ciągłość działania aplikacji, ale nie zapewnia jeszcze automatycznej synchronizacji danych.
+
+Planowany kolejny etap:
+
+```text
+Etap 8 — synchronizacja awaryjnej SQLite do MySQL
+```
+
+---
+
 ## Plik `.env`
 
-Projekt może używać pliku `.env` do przechowywania ustawień lokalnych.
+Projekt używa pliku `.env` do przechowywania ustawień lokalnych.
 
 Przykład:
 
@@ -585,38 +800,70 @@ Przykład:
 APP_NAME=AI Classifier Backend
 APP_VERSION=1.5.0
 ENVIRONMENT=development
+
 AI_ENABLED=false
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-4o-mini
 
-DATABASE_URL=mysql+pymysql://mo1der:sqlmo1der@localhost:3306/ai_classifier
-
-OPENAI_API_KEY=your_api_key_here
+DATABASE_URL=mysql+pymysql://user:password@localhost:3306/ai_classifier
 ```
 
-Jeżeli używasz SQLite, można ustawić np.:
+Jeżeli chcesz używać lokalnej SQLite zamiast MySQL, można ustawić:
 
 ```env
-DATABASE_URL=sqlite:///./tickets.db
+DATABASE_URL=sqlite:///./ai_classifier.db
 ```
 
 Pliku `.env` nie należy dodawać do Gita, ponieważ może zawierać prywatne dane.
 
-Dlatego w `.gitignore` powinien znajdować się wpis:
+W `.gitignore` powinny znajdować się wpisy:
 
-```text
+```gitignore
 .env
+.env.*
+*.db
 ```
+
+---
+
+## Plik `.env.test`
+
+Testy używają osobnej konfiguracji testowej.
+
+Przykład lokalnego pliku `.env.test`:
+
+```env
+APP_NAME=AI Classifier Backend
+APP_VERSION=1.5.0
+ENVIRONMENT=test
+
+AI_ENABLED=false
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-4o-mini
+
+DATABASE_URL=sqlite:///./ai_classifier_test.db
+```
+
+Pliku `.env.test` również nie należy dodawać do Gita.
+
+Testy dodatkowo wymuszają ustawienia testowe w `tests/conftest.py`, więc zwykle nie trzeba ręcznie ustawiać zmiennej `ENVIRONMENT`.
 
 ---
 
 ## Przykładowy plik `.env.example`
 
+Do repozytorium można dodać `.env.example`, ale bez prawdziwych danych dostępowych:
+
 ```env
 APP_NAME=AI Classifier Backend
 APP_VERSION=1.5.0
 ENVIRONMENT=development
+
 AI_ENABLED=false
-DATABASE_URL=sqlite:///./tickets.db
 OPENAI_API_KEY=
+OPENAI_MODEL=gpt-4o-mini
+
+DATABASE_URL=sqlite:///./ai_classifier.db
 ```
 
 ---
@@ -691,6 +938,52 @@ Dokumentacja API będzie dostępna pod adresem:
 
 ```text
 http://127.0.0.1:8000/docs
+```
+
+Endpoint zdrowia:
+
+```text
+http://127.0.0.1:8000/health
+```
+
+---
+
+## Sprawdzenie aktualnie używanej bazy
+
+Najprościej wejść na:
+
+```text
+http://127.0.0.1:8000/health
+```
+
+Przykład dla MySQL:
+
+```json
+{
+  "environment": "development",
+  "database": "ai_classifier",
+  "dialect": "mysql"
+}
+```
+
+Przykład dla SQLite:
+
+```json
+{
+  "environment": "development",
+  "database": "ai_classifier.db",
+  "dialect": "sqlite"
+}
+```
+
+Przykład dla testów:
+
+```json
+{
+  "environment": "test",
+  "database": "ai_classifier_test.db",
+  "dialect": "sqlite"
+}
 ```
 
 ---
@@ -824,6 +1117,22 @@ Testy uruchamia się komendą:
 .\venv\Scripts\python.exe -m pytest
 ```
 
+Nie trzeba ręcznie ustawiać:
+
+```powershell
+$env:ENVIRONMENT="test"
+```
+
+ponieważ testy same ustawiają środowisko testowe w `tests/conftest.py`.
+
+Testy używają:
+
+```text
+sqlite:///./ai_classifier_test.db
+```
+
+i nie dotykają MySQL.
+
 Projekt posiada testy sprawdzające między innymi:
 
 - działanie endpointów API,
@@ -834,12 +1143,14 @@ Projekt posiada testy sprawdzające między innymi:
 - wybór akcji po klasyfikacji,
 - symulowane wykonanie akcji,
 - zapis historii zgłoszeń,
-- pełny proces `/process`.
+- pełny proces `/process`,
+- statystyki zgłoszeń,
+- osobną konfigurację testową.
 
 Aktualny poprawny wynik testów:
 
 ```text
-47 passed in 5.29s
+47 passed
 ```
 
 Przykładowy wynik:
@@ -861,32 +1172,40 @@ tests\test_process_service.py .                                [ 95%]
 tests\test_prompt_loader.py .                                  [ 97%]
 tests\test_ticket_history.py .                                 [100%]
 
-47 passed in 5.29s
+47 passed
 ```
 
 ---
 
 ## Tryb AI vs Rule-Based
 
-Aktualnie domyślnie działa tryb rule-based:
+Tryb AI jest sterowany przez zmienną środowiskową:
 
-```python
-USE_AI = False
+```env
+AI_ENABLED=true
 ```
 
-Aby włączyć klasyfikację AI:
+lub:
 
-```python
-USE_AI = True
+```env
+AI_ENABLED=false
 ```
 
-Wtedy aplikacja może korzystać z `ai_classifier.py`.
+Jeśli AI jest wyłączone, aplikacja używa klasyfikacji regułowej.
 
-W przypadku błędu AI, braku klucza API lub braku środków na API można wrócić do stabilnego trybu rule-based.
+Jeśli AI jest włączone, aplikacja może korzystać z OpenAI API.
+
+W przypadku braku środków na koncie OpenAI, niepoprawnego klucza API lub przekroczenia limitu może pojawić się błąd 429 `insufficient_quota`.
+
+Do pracy lokalnej i testów można bezpiecznie ustawić:
+
+```env
+AI_ENABLED=false
+```
 
 ---
 
-## Git — podstawowy workflow
+## Git — bezpieczny workflow
 
 Po zmianach w projekcie warto sprawdzić status:
 
@@ -894,16 +1213,24 @@ Po zmianach w projekcie warto sprawdzić status:
 git status
 ```
 
-Dodanie wszystkich zmienionych plików:
+Dodanie zmian do commita:
+
+```bash
+git add app tests README.md .gitignore .env.example
+```
+
+Lepiej unikać:
 
 ```bash
 git add .
 ```
 
+jeśli w katalogu mogą znajdować się pliki `.env`, `.db` lub inne dane lokalne.
+
 Utworzenie commita:
 
 ```bash
-git commit -m "Complete stage 5 agent routing logic"
+git commit -m "Add isolated test configuration with SQLite"
 ```
 
 Wysłanie zmian na GitHub:
@@ -922,23 +1249,37 @@ to znaczy, że nie ma żadnych nowych zmian do zapisania.
 
 ---
 
-## Czego nauczyliśmy się w Etapie 5?
+## Czego nauczyliśmy się w Etapie 6?
 
-W Etapie 5 projekt został rozbudowany z prostego klasyfikatora do bardziej agentowego backendu.
+W Etapie 6 dodane zostały statystyki zgłoszeń.
 
 Zrobione zostało:
 
-- dodanie modelu `RouteDecision`,
-- dodanie pola `route` w odpowiedziach API,
-- rozbudowanie `agent_router.py`,
-- routing zgłoszeń do agentów,
-- rozpoznawanie odmian słów przez fragmenty,
-- rozbudowanie `/classify`,
-- rozbudowanie `/process`,
-- symulowane wykonanie akcji `executed_action`,
-- zapis historii zgłoszeń po klasyfikacji,
-- poprawienie i rozszerzenie testów,
-- doprowadzenie projektu do stanu `47 passed`.
+- dodanie endpointu `GET /stats`,
+- liczenie zgłoszeń według kategorii,
+- liczenie zgłoszeń według priorytetu,
+- liczenie zgłoszeń według statusu wykonanej akcji,
+- analiza najczęściej używanych agentów,
+- filtrowanie statystyk po liczbie ostatnich dni.
+
+---
+
+## Czego nauczyliśmy się w Etapie 7?
+
+W Etapie 7 projekt został uporządkowany pod kątem środowisk.
+
+Zrobione zostało:
+
+- dodanie osobnej konfiguracji dla testów,
+- dodanie `.env.test`,
+- automatyczne wymuszanie środowiska testowego w `conftest.py`,
+- testowa baza SQLite `ai_classifier_test.db`,
+- brak używania MySQL w testach,
+- brak zużywania tokenów AI w testach,
+- usunięcie ręcznego czyszczenia rekordów testowych z MySQL,
+- uporządkowanie fallbacku SQLite,
+- ujednolicenie awaryjnej bazy SQLite jako `ai_classifier.db`,
+- potwierdzenie działania testów: `47 passed`.
 
 ---
 
@@ -952,12 +1293,16 @@ Projekt posiada:
 - endpoint `/classify`,
 - endpoint `/process`,
 - endpoint `/tickets`,
+- endpoint `/stats`,
 - klasyfikator regułowy,
 - opcjonalny klasyfikator AI,
 - routing agentów,
 - symulowane akcje,
 - zapis historii zgłoszeń,
+- statystyki zgłoszeń,
 - obsługę SQLite / MySQL,
+- fallback SQLite,
+- osobną bazę testową,
 - logowanie requestów,
 - obsługę błędów,
 - testy automatyczne,
@@ -975,25 +1320,23 @@ Aktualny stan testów:
 
 ## Etapy rozwoju projektu
 
-### Etap 1
+### Etap 1 — podstawowy backend FastAPI
 
-Podstawowy backend FastAPI.
+Dodano podstawową aplikację FastAPI i pierwszy endpoint testowy.
 
-### Etap 2
+### Etap 2 — klasyfikacja wiadomości
 
-Dodanie klasyfikacji wiadomości.
+Dodano klasyfikację tekstu na kategorie biznesowe.
 
-### Etap 3
+### Etap 3 — zapis historii zgłoszeń
 
-Zapis historii zgłoszeń do bazy danych.
+Dodano zapis zgłoszeń do bazy danych.
 
-### Etap 4
+### Etap 4 — obsługa SQLite / MySQL
 
-Obsługa różnych baz danych, SQLite / MySQL.
+Dodano możliwość pracy z różnymi bazami danych przez SQLAlchemy.
 
-### Etap 5
-
-Rozbudowa logiki agentów i routingu zgłoszeń.
+### Etap 5 — routing agentów i symulowane akcje
 
 Dodano:
 
@@ -1004,6 +1347,40 @@ Dodano:
 - `executed_action`,
 - zapis historii po klasyfikacji,
 - pełniejsze testy.
+
+### Etap 6 — statystyki zgłoszeń
+
+Dodano:
+
+- endpoint `/stats`,
+- liczenie zgłoszeń według kategorii,
+- liczenie zgłoszeń według priorytetu,
+- liczenie zgłoszeń według statusu,
+- top agentów.
+
+### Etap 7 — osobna konfiguracja dla testów i aplikacji
+
+Dodano:
+
+- `.env` dla aplikacji,
+- `.env.test` dla testów,
+- testową SQLite,
+- automatyczne ustawianie środowiska testowego,
+- izolację testów od MySQL,
+- brak zużywania tokenów AI w testach.
+
+---
+
+## Możliwe dalsze kroki
+
+Kolejne etapy mogą obejmować:
+
+- Etap 8: synchronizacja danych z awaryjnej SQLite do MySQL,
+- Etap 9: frontend panelu administratora,
+- Etap 10: autoryzacja użytkowników,
+- Etap 11: prawdziwe integracje z systemami ticketowymi,
+- Etap 12: deployment produkcyjny,
+- Etap 13: pełniejszy workflow agentowy z AI.
 
 ---
 
@@ -1016,25 +1393,14 @@ Projekt pokazuje praktyczne umiejętności:
 - praca z Pydantic,
 - praca z SQLAlchemy,
 - obsługa bazy danych,
+- obsługa konfiguracji środowisk,
+- izolowanie testów od danych produkcyjnych,
 - testowanie backendu przez pytest,
 - tworzenie logiki agentowej,
 - routing zgłoszeń,
 - integracja z AI jako opcjonalnym modułem,
 - obsługa Docker / Docker Compose,
 - przygotowanie projektu do dalszej rozbudowy komercyjnej.
-
----
-
-## Możliwe dalsze kroki
-
-Kolejne etapy mogą obejmować:
-
-- Etap 6: statystyki i dashboard zgłoszeń,
-- Etap 7: prawdziwe integracje z systemami ticketowymi,
-- Etap 8: frontend panelu administratora,
-- Etap 9: autoryzacja użytkowników,
-- Etap 10: deployment produkcyjny,
-- Etap 11: pełna integracja z AI Agent workflow.
 
 ---
 
@@ -1047,3 +1413,14 @@ Cel projektu:
 ```text
 nauczyć się tworzyć agentów AI, których można wdrażać komercyjnie w firmach do usprawniania procesów biznesowych
 ```
+
+## Przykłady przewagi AI nad klasyfikacją regułową
+
+System potrafi rozpoznać kategorię zgłoszenia nawet wtedy, gdy wiadomość nie zawiera oczywistych słów kluczowych.
+
+| Wiadomość | Wynik AI | Dlaczego to ważne |
+|---|---|---|
+| W systemie widzę inną sumę niż ta, którą powinienem zapłacić. | FINANCE | Brak słów "faktura" lub "przelew", ale sens jest finansowy. |
+| Od rana nie mogę dostać się do narzędzia, z którego korzystam w pracy. | IT_SUPPORT | Brak słów "hasło", "login", "VPN", ale chodzi o dostęp do narzędzia. |
+| Potrzebuję informacji, jakie dokumenty muszę dostarczyć po powrocie od lekarza. | HR | Brak słów "urlop" lub "kadry", ale sprawa dotyczy dokumentów pracowniczych. |
+| Na ostatnim zestawieniu widzę pozycję, której nie powinno tam być. | FINANCE | Model rozumie kontekst rozliczenia mimo braku typowych słów kluczowych. |
