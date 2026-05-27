@@ -17,6 +17,7 @@ from app.core.settings import settings
 from app.error_handlers import app_error_handler, generic_error_handler, validation_error_handler
 from app.exceptions import AppError
 from app.middleware import RequestLoggingMiddleware
+from app.ai_usage_limiter import ai_usage_limiter
 
 from scripts.sync_sqlite_to_mysql import sync
 
@@ -40,16 +41,30 @@ USE_AI = settings.ai_enabled
 # -----------------------------
 
 def classify_text(text: str) -> dict:
-    """Wybór AI lub rule-based"""
+    """Wybór AI lub rule-based z kontrolą kosztów"""
     if not USE_AI:
         return classify_text_rule_based(text)
 
+    if len(text) > settings.ai_max_input_chars:
+        print(
+            f"Input too long for AI ({len(text)} chars), "
+            f"limit is {settings.ai_max_input_chars}. Using rule-based fallback."
+        )
+        return classify_text_rule_based(text)
+
+    if not ai_usage_limiter.can_use_ai(settings.ai_daily_request_limit):
+        print(
+            f"AI daily request limit reached "
+            f"({settings.ai_daily_request_limit}). Using rule-based fallback."
+        )
+        return classify_text_rule_based(text)
+
     try:
+        ai_usage_limiter.register_ai_request()
         return classify_text_with_ai(text)
     except Exception as error:
         print(f"AI classifier failed, using rule-based fallback. Error: {error}")
         return classify_text_rule_based(text)
-
 # -----------------------------
 # Root endpoint
 @app.get("/")
@@ -82,6 +97,23 @@ def health_check():
         "ai_enabled": settings.ai_enabled,
         "database": database_name,
         "dialect": database_dialect,
+    }
+
+@app.get("/ai/status")
+def ai_status():
+    usage = ai_usage_limiter.get_usage()
+
+    return {
+        "ai_enabled": settings.ai_enabled,
+        "model": settings.openai_model,
+        "daily_request_limit": settings.ai_daily_request_limit,
+        "request_count_today": usage["request_count"],
+        "remaining_requests_today": max(
+            settings.ai_daily_request_limit - usage["request_count"],
+            0,
+        ),
+        "max_input_chars": settings.ai_max_input_chars,
+        "max_output_tokens": settings.ai_max_output_tokens,
     }
 
 # -----------------------------

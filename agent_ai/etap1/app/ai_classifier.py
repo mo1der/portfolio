@@ -1,19 +1,20 @@
 import json
-import os
 
-from dotenv import load_dotenv
 from openai import OpenAI
 
-load_dotenv()
-
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
+from app.core.settings import settings
+OPENAI_API_KEY = settings.openai_api_key
+OPENAI_MODEL = settings.openai_model
+AI_MAX_OUTPUT_TOKENS = settings.ai_max_output_tokens
 
 def classify_text_with_ai(text: str) -> dict:
     if not OPENAI_API_KEY:
         raise RuntimeError("Brak OPENAI_API_KEY")
 
-    client = OpenAI(api_key=OPENAI_API_KEY)
+    client = OpenAI(
+        api_key=OPENAI_API_KEY,
+        timeout=10.0,
+    )
 
     prompt = f"""
 Klasyfikuj wiadomość użytkownika.
@@ -31,7 +32,7 @@ Wiadomość:
 """
 
     response = client.chat.completions.create(
-        model="gpt-4.1-mini",
+        model=settings.openai_model,
         messages=[
             {
                 "role": "system",
@@ -43,6 +44,7 @@ Wiadomość:
             },
         ],
         temperature=0,
+        max_tokens=settings.ai_max_output_tokens,
     )
 
     content = response.choices[0].message.content

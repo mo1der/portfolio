@@ -14,7 +14,10 @@ class Settings(BaseSettings):
     # --- AI ---
     ai_enabled: bool = True
     openai_api_key: str | None = None
-    openai_model: str = "gpt-4o-mini"
+    openai_model: str = "gpt-5.4-mini"
+    ai_max_input_chars: int = 1200
+    ai_max_output_tokens: int = 300
+    ai_daily_request_limit: int = 50
 
     # --- Baza danych ---
     database_url: str = "sqlite:///./ai_classifier.db"
