@@ -111,3 +111,16 @@ class TicketHistoryResponse(BaseModel):
     model_config = {
         "from_attributes": True
     }
+
+class EmailAnalyzeRequest(BaseModel):
+    from_email: str = Field(..., min_length=3)
+    subject: str = Field(..., min_length=1)
+    body: str = Field(..., min_length=1)
+    received_at: datetime | None = None
+
+    @field_validator("subject", "body")
+    @classmethod
+    def field_must_not_be_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Field cannot be empty")
+        return value

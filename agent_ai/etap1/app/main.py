@@ -10,7 +10,7 @@ import app.models
 from app.repositories import get_ticket_history, save_ticket_history
 from app.agent_router import route_message
 from app.response_builders import build_process_response
-from app.schemas import ClassificationRequest, ProcessResponse, TicketHistoryResponse
+from app.schemas import ClassificationRequest, ProcessResponse, TicketHistoryResponse, SourceChannel, EmailAnalyzeRequest
 from app.classifier import classify_text_rule_based
 from app.ai_classifier import classify_text_with_ai
 from app.core.settings import settings
@@ -167,6 +167,32 @@ def classify_message(
 
 # -----------------------------
 # Endpoint /process
+
+@app.post("/emails/analyze", response_model=ProcessResponse)
+def analyze_email(
+    request: EmailAnalyzeRequest,
+    db: Session = Depends(get_db),
+):
+    email_text = (
+        f"Nadawca: {request.from_email}\n"
+        f"Temat: {request.subject}\n"
+        f"Treść: {request.body}"
+    )
+
+    classification = classify_text(email_text)
+
+    response = build_process_response(
+        category=classification["category"].value if hasattr(classification["category"], "value") else classification["category"],
+        priority=classification["priority"].value if hasattr(classification["priority"], "value") else classification["priority"],
+        summary=classification["summary"],
+        suggested_action=classification["suggested_action"],
+        source=classification["source"],
+        text=email_text,
+        source_channel=SourceChannel.EMAIL,
+    )
+
+    save_ticket_history(db=db, input_text=email_text, classification=response)
+    return response
 
 @app.post("/process", response_model=ProcessResponse)
 def process(request: ClassificationRequest, db: Session = Depends(get_db)):
