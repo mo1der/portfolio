@@ -17,6 +17,14 @@ class Category(str, Enum):
     HR = "HR"
     OTHER = "OTHER"
 
+class Intent(str, Enum):
+    CREATE_TICKET = "CREATE_TICKET"
+    CHECK_STATUS = "CHECK_STATUS"
+    UPDATE_DATA = "UPDATE_DATA"
+    CONTACT_HUMAN = "CONTACT_HUMAN"
+    COMPLAINT = "COMPLAINT"
+    THANKS = "THANKS"
+    OTHER = "OTHER"
 
 class Priority(str, Enum):
     LOW = "LOW"
@@ -70,6 +78,7 @@ class RouteDecision(BaseModel):
 class ClassificationResponse(BaseModel):
     category: Category
     priority: Priority
+    intent: Intent = Intent.OTHER
     summary: str
     suggested_action: str
     source: str
@@ -86,6 +95,7 @@ class ActionResult(BaseModel):
 class ProcessResponse(BaseModel):
     category: Category
     priority: Priority
+    intent: Intent = Intent.OTHER
     summary: str
     suggested_action: str
     source: str

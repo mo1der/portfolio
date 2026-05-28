@@ -1,6 +1,7 @@
 from app.schemas import ClassificationResponse, ProcessResponse, SourceChannel
 from app.agent_router import route_message
 from app.action_executor import execute_action
+from app.intent_classifier import classify_intent
 
 
 def build_classification_response(
@@ -12,11 +13,13 @@ def build_classification_response(
     text,
 ) -> ClassificationResponse:
     route = route_message(category, text)
+    intent = classify_intent(text)
     executed_action = execute_action(route.action_type)
 
     return ClassificationResponse(
         category=category,
         priority=priority,
+        intent=intent,
         summary=summary,
         suggested_action=suggested_action,
         source=source,
@@ -35,11 +38,13 @@ def build_process_response(
     source_channel=SourceChannel.API,
 ) -> ProcessResponse:
     route = route_message(category, text)
+    intent = classify_intent(text)
     executed_action = execute_action(route.action_type)
 
     return ProcessResponse(
         category=category,
         priority=priority,
+        intent=intent,
         summary=summary,
         suggested_action=suggested_action,
         source=source,

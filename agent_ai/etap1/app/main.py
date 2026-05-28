@@ -18,6 +18,7 @@ from app.error_handlers import app_error_handler, generic_error_handler, validat
 from app.exceptions import AppError
 from app.middleware import RequestLoggingMiddleware
 from app.ai_usage_limiter import ai_usage_limiter
+from app.intent_classifier import classify_intent
 
 from scripts.sync_sqlite_to_mysql import sync
 
@@ -200,6 +201,7 @@ def process(request: ClassificationRequest, db: Session = Depends(get_db)):
     source_channel = request.source_channel
     classification = classify_text(text)
     category = classification["category"]
+    intent = classify_intent(text)
 
     # Routing decyzji agenta
     route = route_message(category, text)
@@ -220,6 +222,7 @@ def process(request: ClassificationRequest, db: Session = Depends(get_db)):
         source=classification["source"],
         source_channel=source_channel,
         route=route,
+        intent=intent,
         executed_action=executed_action
     )
 
