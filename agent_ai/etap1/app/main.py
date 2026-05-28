@@ -41,30 +41,50 @@ USE_AI = settings.ai_enabled
 # -----------------------------
 
 def classify_text(text: str) -> dict:
-    """Wybór AI lub rule-based z kontrolą kosztów"""
+    """
+    Hybrydowa klasyfikacja:
+    1. Najpierw klasyfikator regułowy.
+    2. Jeśli reguły rozpoznają kategorię inną niż OTHER, nie używamy AI.
+    3. Jeśli reguły zwrócą OTHER, próbujemy AI.
+    4. Jeśli AI jest wyłączone, limit przekroczony, tekst za długi albo AI ma błąd,
+       zostaje wynik RULE_BASED.
+    """
+    rule_based_result = classify_text_rule_based(text)
+
+    rule_based_category = rule_based_result["category"]
+    rule_based_category_value = (
+        rule_based_category.value
+        if hasattr(rule_based_category, "value")
+        else rule_based_category
+    )
+
+    if rule_based_category_value != "OTHER":
+        return rule_based_result
+
     if not USE_AI:
-        return classify_text_rule_based(text)
+        return rule_based_result
 
     if len(text) > settings.ai_max_input_chars:
         print(
             f"Input too long for AI ({len(text)} chars), "
             f"limit is {settings.ai_max_input_chars}. Using rule-based fallback."
         )
-        return classify_text_rule_based(text)
+        return rule_based_result
 
     if not ai_usage_limiter.can_use_ai(settings.ai_daily_request_limit):
         print(
             f"AI daily request limit reached "
             f"({settings.ai_daily_request_limit}). Using rule-based fallback."
         )
-        return classify_text_rule_based(text)
+        return rule_based_result
 
     try:
         ai_usage_limiter.register_ai_request()
         return classify_text_with_ai(text)
     except Exception as error:
         print(f"AI classifier failed, using rule-based fallback. Error: {error}")
-        return classify_text_rule_based(text)
+        return rule_based_result
+
 # -----------------------------
 # Root endpoint
 @app.get("/")
