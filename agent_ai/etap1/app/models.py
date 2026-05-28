@@ -7,6 +7,7 @@ class TicketHistory(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     input_text = Column(Text, nullable=False)
+    source_channel = Column(String(50), nullable=False, default="API")
 
     category = Column(String(50), nullable=False)
     priority = Column(String(50), nullable=False)

@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models import TicketHistory
 
+
 def save_ticket_history(db: Session, input_text: str, classification):
     """
     Zapisuje zgłoszenie do bazy.
@@ -9,8 +10,17 @@ def save_ticket_history(db: Session, input_text: str, classification):
     executed = getattr(classification, "executed_action", None)
     route = getattr(classification, "route", None)
 
+    source_channel = getattr(classification, "source_channel", "API")
+    source_channel_value = (
+        source_channel.value
+        if hasattr(source_channel, "value")
+        else source_channel
+    )
+
     ticket = TicketHistory(
         input_text=input_text,
+        source_channel=source_channel_value,
+
         category=classification.category.value if hasattr(classification.category, "value") else classification.category,
         priority=classification.priority.value if hasattr(classification.priority, "value") else classification.priority,
         summary=classification.summary,
@@ -24,7 +34,7 @@ def save_ticket_history(db: Session, input_text: str, classification):
         route_agent_name=route.agent_name if route else None,
         route_department=route.department.value if route and hasattr(route.department, "value") else (route.department if route else None),
         route_reason=route.reason if route else None,
-        route_action_type=route.action_type.value if route and hasattr(route.action_type, "value") else (route.action_type if route else None)
+        route_action_type=route.action_type.value if route and hasattr(route.action_type, "value") else (route.action_type if route else None),
     )
 
     db.add(ticket)

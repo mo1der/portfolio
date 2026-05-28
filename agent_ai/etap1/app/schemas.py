@@ -1,14 +1,15 @@
 from datetime import datetime
 from enum import Enum
+from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from typing import Optional
 
 class ExecutedAction(BaseModel):
     action_type: str
     status: str
     message: str
+
 
 class Category(str, Enum):
     IT_SUPPORT = "IT_SUPPORT"
@@ -21,6 +22,14 @@ class Priority(str, Enum):
     LOW = "LOW"
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"
+
+
+class SourceChannel(str, Enum):
+    CHAT = "CHAT"
+    EMAIL = "EMAIL"
+    FORM = "FORM"
+    API = "API"
+    MANUAL = "MANUAL"
 
 
 class ActionType(str, Enum):
@@ -41,6 +50,7 @@ class ActionStatus(str, Enum):
 
 class ClassificationRequest(BaseModel):
     text: str = Field(..., min_length=1)
+    source_channel: SourceChannel = SourceChannel.API
 
     @field_validator("text")
     @classmethod
@@ -63,7 +73,7 @@ class ClassificationResponse(BaseModel):
     summary: str
     suggested_action: str
     source: str
-    route: RouteDecision | None = None  # nowy atrybut
+    route: RouteDecision | None = None
 
 
 class ActionResult(BaseModel):
@@ -79,13 +89,15 @@ class ProcessResponse(BaseModel):
     summary: str
     suggested_action: str
     source: str
-    route: RouteDecision | None = None  # podpinamy do response
+    source_channel: SourceChannel = SourceChannel.API
+    route: RouteDecision | None = None
     executed_action: ActionResult
 
 
 class TicketHistoryResponse(BaseModel):
     id: int
     input_text: str
+    source_channel: SourceChannel | None = None
     category: Category
     priority: Priority
     summary: str

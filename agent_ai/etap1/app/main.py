@@ -138,12 +138,14 @@ def ai_status():
 
 # -----------------------------
 # Endpoint /classify
+
 @app.post("/classify", response_model=ProcessResponse)
 def classify_message(
     request: ClassificationRequest,
     db: Session = Depends(get_db),
 ):
     text = request.text
+    source_channel = request.source_channel
 
     # Klasyfikacja
     classification = classify_text(text)
@@ -155,7 +157,8 @@ def classify_message(
         summary=classification["summary"],
         suggested_action=classification["suggested_action"],
         source=classification["source"],
-        text=text
+        text=text,
+        source_channel=source_channel,
     )
 
     # Zapis do bazy
@@ -164,9 +167,11 @@ def classify_message(
 
 # -----------------------------
 # Endpoint /process
+
 @app.post("/process", response_model=ProcessResponse)
 def process(request: ClassificationRequest, db: Session = Depends(get_db)):
     text = request.text
+    source_channel = request.source_channel
     classification = classify_text(text)
     category = classification["category"]
 
@@ -187,6 +192,7 @@ def process(request: ClassificationRequest, db: Session = Depends(get_db)):
         summary=classification["summary"],
         suggested_action=classification["suggested_action"],
         source=classification["source"],
+        source_channel=source_channel,
         route=route,
         executed_action=executed_action
     )
