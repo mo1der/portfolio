@@ -74,6 +74,12 @@ class ActionStatus(str, Enum):
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
 
+class TicketStatus(str, Enum):
+    NEW = "NEW"
+    IN_PROGRESS = "IN_PROGRESS"
+    WAITING_FOR_USER = "WAITING_FOR_USER"
+    RESOLVED = "RESOLVED"
+    CLOSED = "CLOSED"
 
 class ClassificationRequest(BaseModel):
     text: str = Field(..., min_length=1)
@@ -102,6 +108,7 @@ class ClassificationResponse(BaseModel):
     suggested_action: str
     source: str
     route: RouteDecision | None = None
+    ticket_status: TicketStatus = TicketStatus.NEW
 
 
 class ActionResult(BaseModel):
@@ -121,6 +128,7 @@ class ProcessResponse(BaseModel):
     source_channel: SourceChannel = SourceChannel.API
     route: RouteDecision | None = None
     executed_action: ActionResult
+    ticket_status: TicketStatus = TicketStatus.NEW
 
 
 class TicketHistoryResponse(BaseModel):
@@ -129,6 +137,8 @@ class TicketHistoryResponse(BaseModel):
     source_channel: SourceChannel | None = None
     category: Category
     priority: Priority
+    intent: Intent | None = None
+    ticket_status: TicketStatus = TicketStatus.NEW
     summary: str
     suggested_action: str
     source: str | None = None

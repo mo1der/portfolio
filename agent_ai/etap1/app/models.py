@@ -11,6 +11,8 @@ class TicketHistory(Base):
 
     category = Column(String(50), nullable=False)
     priority = Column(String(50), nullable=False)
+    intent = Column(String(50), nullable=True)
+    ticket_status = Column(String(50), nullable=False, default="NEW")
     summary = Column(Text, nullable=False)
     suggested_action = Column(Text, nullable=False)
     source = Column(String(50), nullable=True)
@@ -26,3 +28,4 @@ class TicketHistory(Base):
     route_action_type = Column(String(100), nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
+
