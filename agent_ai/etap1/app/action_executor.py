@@ -1,6 +1,19 @@
 from app.schemas import ActionResult, ActionStatus, ActionType, Category
 
 
+def _get_target_department(action_type: ActionType) -> Category:
+    if "FINANCE" in action_type.value:
+        return Category.FINANCE
+
+    if "IT_SUPPORT" in action_type.value:
+        return Category.IT_SUPPORT
+
+    if "HR" in action_type.value:
+        return Category.HR
+
+    return Category.OTHER
+
+
 def execute_action(action_type: ActionType) -> ActionResult:
     if action_type == ActionType.CREATE_FINANCE_TICKET:
         return ActionResult(
@@ -26,6 +39,14 @@ def execute_action(action_type: ActionType) -> ActionResult:
             message="Utworzono symulowaną sprawę do działu HR.",
         )
 
+    if action_type == ActionType.CREATE_OTHER_TICKET:
+        return ActionResult(
+            action_type=action_type,
+            target_department=Category.OTHER,
+            status=ActionStatus.SIMULATED,
+            message="Utworzono symulowane zgłoszenie ogólne.",
+        )
+
     if action_type == ActionType.MARK_AS_LOW_PRIORITY:
         return ActionResult(
             action_type=action_type,
@@ -40,6 +61,46 @@ def execute_action(action_type: ActionType) -> ActionResult:
             target_department=Category.OTHER,
             status=ActionStatus.SIMULATED,
             message="Sprawa została symulacyjnie eskalowana do managera.",
+        )
+
+    if action_type == ActionType.ROUTE_TO_HUMAN:
+        return ActionResult(
+            action_type=action_type,
+            target_department=Category.OTHER,
+            status=ActionStatus.SIMULATED,
+            message="Sprawa została przekazana do obsługi przez człowieka.",
+        )
+
+    if action_type == ActionType.NO_ACTION:
+        return ActionResult(
+            action_type=action_type,
+            target_department=Category.OTHER,
+            status=ActionStatus.SIMULATED,
+            message="Nie wykonano akcji, ponieważ wiadomość nie wymaga dalszej obsługi.",
+        )
+
+    if "CHECK" in action_type.value:
+        return ActionResult(
+            action_type=action_type,
+            target_department=_get_target_department(action_type),
+            status=ActionStatus.SIMULATED,
+            message=f"Symulacja sprawdzenia statusu: {action_type.value}.",
+        )
+
+    if "UPDATE" in action_type.value:
+        return ActionResult(
+            action_type=action_type,
+            target_department=_get_target_department(action_type),
+            status=ActionStatus.SIMULATED,
+            message=f"Symulacja aktualizacji danych: {action_type.value}.",
+        )
+
+    if "COMPLAINT" in action_type.value or "ESCALATE" in action_type.value:
+        return ActionResult(
+            action_type=action_type,
+            target_department=_get_target_department(action_type),
+            status=ActionStatus.SIMULATED,
+            message=f"Symulacja eskalacji sprawy: {action_type.value}.",
         )
 
     return ActionResult(

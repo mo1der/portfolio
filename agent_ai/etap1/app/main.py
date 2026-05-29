@@ -18,9 +18,12 @@ from app.error_handlers import app_error_handler, generic_error_handler, validat
 from app.exceptions import AppError
 from app.middleware import RequestLoggingMiddleware
 from app.ai_usage_limiter import ai_usage_limiter
-from app.intent_classifier import classify_intent
 
 from scripts.sync_sqlite_to_mysql import sync
+
+from app.intent_classifier import classify_intent
+from app.action_router import route_action
+from app.action_executor import execute_action
 
 # FastAPI app
 app = FastAPI(title=settings.app_name, version=settings.app_version)
@@ -199,31 +202,38 @@ def analyze_email(
 def process(request: ClassificationRequest, db: Session = Depends(get_db)):
     text = request.text
     source_channel = request.source_channel
+
     classification = classify_text(text)
-    category = classification["category"]
+
+    category = (
+        classification["category"].value
+        if hasattr(classification["category"], "value")
+        else classification["category"]
+    )
+
+    priority = (
+        classification["priority"].value
+        if hasattr(classification["priority"], "value")
+        else classification["priority"]
+    )
+
     intent = classify_intent(text)
 
-    # Routing decyzji agenta
     route = route_message(category, text)
 
-    # Symulacja akcji
-    executed_action = {
-        "action_type": route.action_type,
-        "target_department": route.department,
-        "status": "SIMULATED",
-        "message": f"Symulacja wykonania akcji {route.action_type} dla agenta {route.agent_name}"
-    }
+    action_type = route_action(category, intent)
+    executed_action = execute_action(action_type)
 
     response = ProcessResponse(
-        category=classification["category"],
-        priority=classification["priority"],
+        category=category,
+        priority=priority,
+        intent=intent,
         summary=classification["summary"],
         suggested_action=classification["suggested_action"],
         source=classification["source"],
         source_channel=source_channel,
         route=route,
-        intent=intent,
-        executed_action=executed_action
+        executed_action=executed_action,
     )
 
     save_ticket_history(db=db, input_text=text, classification=response)
