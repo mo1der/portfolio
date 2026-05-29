@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, Query
+from fastapi import FastAPI, Depends, Query, HTTPException
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -7,10 +7,11 @@ import pandas as pd
 
 from app.database import Base, engine, get_db
 import app.models
-from app.repositories import get_ticket_history, save_ticket_history
+from app.repositories import get_ticket_history, save_ticket_history, update_ticket_status, get_ticket_by_id
+from app.ticket_status_rules import is_status_transition_allowed
 from app.agent_router import route_message
 from app.response_builders import build_process_response
-from app.schemas import ClassificationRequest, ProcessResponse, TicketHistoryResponse, SourceChannel, EmailAnalyzeRequest
+from app.schemas import ClassificationRequest, ProcessResponse, TicketHistoryResponse, TicketStatusUpdateRequest, SourceChannel, EmailAnalyzeRequest
 from app.classifier import classify_text_rule_based
 from app.ai_classifier import classify_text_with_ai
 from app.core.settings import settings
@@ -240,10 +241,108 @@ def process(request: ClassificationRequest, db: Session = Depends(get_db)):
     return response
 
 # -----------------------------
+
+def ticket_to_response(ticket):
+    return {
+        "id": ticket.id,
+        "input_text": ticket.input_text,
+        "source_channel": ticket.source_channel,
+
+        "category": ticket.category,
+        "priority": ticket.priority,
+        "intent": ticket.intent,
+        "ticket_status": ticket.ticket_status,
+
+        "summary": ticket.summary,
+        "suggested_action": ticket.suggested_action,
+        "source": ticket.source,
+
+        "executed_action_type": ticket.executed_action_type,
+        "executed_action_status": ticket.executed_action_status,
+        "executed_action_message": ticket.executed_action_message,
+
+        "route_agent_name": ticket.route_agent_name,
+        "route_department": ticket.route_department,
+        "route_reason": ticket.route_reason,
+
+        # baza ma starą nazwę, API pokazuje nową nazwę
+        "route_default_action_type": ticket.route_action_type,
+
+        "created_at": ticket.created_at,
+    }
+
+
+# -----------------------------
+
+@app.patch(
+    "/tickets/{ticket_id}/status",
+    response_model=TicketHistoryResponse,
+    responses={
+        400: {
+            "description": "Invalid ticket status transition",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Invalid ticket status transition: CLOSED -> NEW"
+                    }
+                }
+            },
+        },
+        404: {
+            "description": "Ticket not found",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Ticket not found"
+                    }
+                }
+            },
+        },
+        422: {
+            "description": "Validation error - invalid ticket_status value",
+        },
+    },
+)
+def patch_ticket_status(
+    ticket_id: int,
+    request: TicketStatusUpdateRequest,
+    db: Session = Depends(get_db),
+):
+    ticket = get_ticket_by_id(db=db, ticket_id=ticket_id)
+
+    if ticket is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Ticket not found",
+        )
+
+    if not is_status_transition_allowed(
+        current_status=ticket.ticket_status,
+        new_status=request.ticket_status,
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Invalid ticket status transition: "
+                f"{ticket.ticket_status} -> {request.ticket_status.value}"
+            ),
+        )
+
+    updated_ticket = update_ticket_status(
+        db=db,
+        ticket_id=ticket_id,
+        ticket_status=request.ticket_status,
+    )
+
+    return ticket_to_response(updated_ticket)
+
+
+# -----------------------------
 # Endpoint /tickets
 @app.get("/tickets", response_model=list[TicketHistoryResponse])
-def read_ticket_history(db: Session = Depends(get_db)):
-    return get_ticket_history(db)
+def get_tickets(db: Session = Depends(get_db)):
+    tickets = get_ticket_history(db)
+    return [ticket_to_response(ticket) for ticket in tickets]
 
 # -----------------------------
 # Endpoint /stats

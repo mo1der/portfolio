@@ -81,6 +81,9 @@ class TicketStatus(str, Enum):
     RESOLVED = "RESOLVED"
     CLOSED = "CLOSED"
 
+class TicketStatusUpdateRequest(BaseModel):
+    ticket_status: TicketStatus
+
 class ClassificationRequest(BaseModel):
     text: str = Field(..., min_length=1)
     source_channel: SourceChannel = SourceChannel.API
@@ -130,26 +133,35 @@ class ProcessResponse(BaseModel):
     executed_action: ActionResult
     ticket_status: TicketStatus = TicketStatus.NEW
 
-
 class TicketHistoryResponse(BaseModel):
     id: int
     input_text: str
     source_channel: SourceChannel | None = None
+
     category: Category
     priority: Priority
     intent: Intent | None = None
     ticket_status: TicketStatus = TicketStatus.NEW
+
     summary: str
     suggested_action: str
     source: str | None = None
+
     executed_action_type: str | None = None
     executed_action_status: str | None = None
     executed_action_message: str | None = None
+
+    route_agent_name: str | None = None
+    route_department: str | None = None
+    route_reason: str | None = None
+    route_default_action_type: str | None = None
+
     created_at: datetime
 
     model_config = {
         "from_attributes": True
     }
+
 
 class EmailAnalyzeRequest(BaseModel):
     from_email: str = Field(..., min_length=3)

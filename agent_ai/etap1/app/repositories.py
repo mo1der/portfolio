@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.models import TicketHistory
-
+from app.schemas import TicketStatus
 
 def save_ticket_history(db: Session, input_text: str, classification):
     """
@@ -89,3 +89,18 @@ def get_ticket_history(db: Session):
     Pobiera wszystkie zgłoszenia z bazy, posortowane od najnowszych.
     """
     return db.query(TicketHistory).order_by(TicketHistory.id.desc()).all()
+
+def update_ticket_status(db, ticket_id: int, ticket_status: TicketStatus):
+    ticket = db.query(TicketHistory).filter(TicketHistory.id == ticket_id).first()
+
+    if ticket is None:
+        return None
+
+    ticket.ticket_status = ticket_status.value
+    db.commit()
+    db.refresh(ticket)
+
+    return ticket
+
+def get_ticket_by_id(db, ticket_id: int):
+    return db.query(TicketHistory).filter(TicketHistory.id == ticket_id).first()
