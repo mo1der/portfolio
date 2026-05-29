@@ -4,6 +4,7 @@ import pytest
 from app.agent_router import route_message
 from app.schemas import Category, ActionType
 
+
 @pytest.mark.parametrize(
     "category,text,expected_agent,expected_action",
     [
@@ -15,10 +16,11 @@ from app.schemas import Category, ActionType
         (Category.HR, "Zwolnienie lekarskie na przyszły tydzień", "hr_leave_agent", ActionType.CREATE_HR_TICKET),
         (Category.OTHER, "Mam pytanie ogólne", "general_agent", ActionType.SEND_TO_GENERAL_QUEUE),
         (Category.FINANCE, "Nie wiem co zrobić", "finance_invoice_agent", ActionType.CREATE_FINANCE_TICKET),
-    ]
+    ],
 )
 def test_routing(category, text, expected_agent, expected_action):
     route = route_message(category, text)
+
     assert route.agent_name == expected_agent
-    assert route.action_type == expected_action
+    assert route.default_action_type == expected_action
     assert route.department == category

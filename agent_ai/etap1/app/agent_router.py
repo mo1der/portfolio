@@ -18,7 +18,7 @@ ROUTING_RULES = [
         ],
         "category": Category.FINANCE,
         "agent_name": "finance_invoice_agent",
-        "action_type": ActionType.CREATE_FINANCE_TICKET,
+        "default_action_type": ActionType.CREATE_FINANCE_TICKET,
         "reason": "Wiadomość dotyczy faktury, płatności lub rozliczeń.",
     },
     {
@@ -39,7 +39,7 @@ ROUTING_RULES = [
         ],
         "category": Category.IT_SUPPORT,
         "agent_name": "it_access_agent",
-        "action_type": ActionType.CREATE_IT_SUPPORT_TICKET,
+        "default_action_type": ActionType.CREATE_IT_SUPPORT_TICKET,
         "reason": "Wiadomość dotyczy problemów IT, dostępu, logowania lub sprzętu.",
     },
     {
@@ -58,7 +58,7 @@ ROUTING_RULES = [
         ],
         "category": Category.HR,
         "agent_name": "hr_leave_agent",
-        "action_type": ActionType.CREATE_HR_TICKET,
+        "default_action_type": ActionType.CREATE_HR_TICKET,
         "reason": "Wiadomość dotyczy HR, urlopu, wynagrodzenia lub spraw pracowniczych.",
     },
 ]
@@ -79,7 +79,7 @@ def route_message(category: Category, text: str) -> RouteDecision:
                     agent_name=rule["agent_name"],
                     department=rule["category"],
                     reason=rule["reason"],
-                    action_type=rule["action_type"],
+                    default_action_type=rule["default_action_type"],
                 )
 
     if category == Category.FINANCE:
@@ -87,7 +87,7 @@ def route_message(category: Category, text: str) -> RouteDecision:
             agent_name="finance_invoice_agent",
             department=Category.FINANCE,
             reason="Kategoria FINANCE została rozpoznana, ale brak szczegółowego dopasowania słów kluczowych.",
-            action_type=ActionType.CREATE_FINANCE_TICKET,
+            default_action_type=ActionType.CREATE_FINANCE_TICKET,
         )
 
     if category == Category.IT_SUPPORT:
@@ -95,7 +95,7 @@ def route_message(category: Category, text: str) -> RouteDecision:
             agent_name="it_access_agent",
             department=Category.IT_SUPPORT,
             reason="Kategoria IT_SUPPORT została rozpoznana, ale brak szczegółowego dopasowania słów kluczowych.",
-            action_type=ActionType.CREATE_IT_SUPPORT_TICKET,
+            default_action_type=ActionType.CREATE_IT_SUPPORT_TICKET,
         )
 
     if category == Category.HR:
@@ -103,12 +103,12 @@ def route_message(category: Category, text: str) -> RouteDecision:
             agent_name="hr_leave_agent",
             department=Category.HR,
             reason="Kategoria HR została rozpoznana, ale brak szczegółowego dopasowania słów kluczowych.",
-            action_type=ActionType.CREATE_HR_TICKET,
+            default_action_type=ActionType.CREATE_HR_TICKET,
         )
 
     return RouteDecision(
         agent_name="general_agent",
         department=category,
         reason="Brak dopasowania do reguł. Kierowane do agenta ogólnego.",
-        action_type=ActionType.SEND_TO_GENERAL_QUEUE,
+        default_action_type=ActionType.SEND_TO_GENERAL_QUEUE,
     )

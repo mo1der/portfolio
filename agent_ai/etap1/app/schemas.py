@@ -91,7 +91,7 @@ class RouteDecision(BaseModel):
     agent_name: str
     department: Category
     reason: str
-    action_type: ActionType
+    default_action_type: ActionType
 
 
 class ClassificationResponse(BaseModel):

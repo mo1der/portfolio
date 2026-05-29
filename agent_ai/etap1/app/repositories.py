@@ -34,7 +34,11 @@ def save_ticket_history(db: Session, input_text: str, classification):
         route_agent_name=route.agent_name if route else None,
         route_department=route.department.value if route and hasattr(route.department, "value") else (route.department if route else None),
         route_reason=route.reason if route else None,
-        route_action_type=route.action_type.value if route and hasattr(route.action_type, "value") else (route.action_type if route else None),
+        route_action_type=(
+            route.default_action_type.value
+            if route and hasattr(route.default_action_type, "value")
+            else (route.default_action_type if route else None)
+        ),
     )
 
     db.add(ticket)

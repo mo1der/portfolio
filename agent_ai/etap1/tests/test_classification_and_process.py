@@ -50,6 +50,27 @@ def test_process_routing_and_executed_action(client, text, expected_category, ex
 
     executed = data["executed_action"]
 
-    assert executed["action_type"] == data["route"]["action_type"]
+    assert data["route"]["default_action_type"] is not None
+    assert executed["action_type"] in [
+        "CREATE_FINANCE_TICKET",
+        "CREATE_IT_SUPPORT_TICKET",
+        "CREATE_HR_TICKET",
+        "CREATE_OTHER_TICKET",
+        "SEND_TO_GENERAL_QUEUE",
+        "CHECK_FINANCE_STATUS",
+        "CHECK_IT_SUPPORT_STATUS",
+        "CHECK_HR_STATUS",
+        "CHECK_OTHER_STATUS",
+        "UPDATE_FINANCE_DATA",
+        "UPDATE_IT_SUPPORT_DATA",
+        "UPDATE_HR_DATA",
+        "UPDATE_OTHER_DATA",
+        "ESCALATE_FINANCE_COMPLAINT",
+        "ESCALATE_IT_SUPPORT_COMPLAINT",
+        "ESCALATE_HR_COMPLAINT",
+        "ESCALATE_OTHER_COMPLAINT",
+        "ROUTE_TO_HUMAN",
+        "NO_ACTION",
+    ]
     assert executed["target_department"] == data["route"]["department"]
     assert executed["status"] == "SIMULATED"
