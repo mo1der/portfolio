@@ -394,6 +394,22 @@ def get_status_history(
 
     return get_ticket_status_history(db=db, ticket_id=ticket_id)
 
+@app.get("/tickets/{ticket_id}", response_model=TicketHistoryResponse)
+def get_ticket(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+):
+    ticket = get_ticket_by_id(db=db, ticket_id=ticket_id)
+
+    if ticket is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Ticket not found",
+        )
+
+    return ticket_to_response(ticket)
+
+
 
 # -----------------------------
 # Endpoint /stats
