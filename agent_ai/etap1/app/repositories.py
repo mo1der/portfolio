@@ -91,6 +91,7 @@ def get_ticket_history(
     priority=None,
     intent=None,
     source_channel=None,
+    assigned_to=None,
 ):
     query = db.query(TicketHistory)
 
@@ -115,6 +116,9 @@ def get_ticket_history(
             source_channel.value if hasattr(source_channel, "value") else source_channel
         )
         query = query.filter(TicketHistory.source_channel == source_channel_value)
+
+    if assigned_to is not None:
+        query = query.filter(TicketHistory.assigned_to == assigned_to)
 
     return query.order_by(TicketHistory.created_at.desc()).all()
 
@@ -188,3 +192,20 @@ def get_ticket_comments(db, ticket_id: int):
         .order_by(TicketComment.created_at.asc())
         .all()
     )
+
+def assign_ticket(
+    db,
+    ticket_id: int,
+    assigned_to: str,
+):
+    ticket = get_ticket_by_id(db=db, ticket_id=ticket_id)
+
+    if ticket is None:
+        return None
+
+    ticket.assigned_to = assigned_to
+
+    db.commit()
+    db.refresh(ticket)
+
+    return ticket

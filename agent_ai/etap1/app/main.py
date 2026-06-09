@@ -17,6 +17,7 @@ from app.repositories import (
     get_ticket_status_history,
     create_ticket_comment,
     get_ticket_comments,
+    assign_ticket,
 )
 
 from app.ticket_status_rules import is_status_transition_allowed
@@ -36,6 +37,7 @@ from app.schemas import (
     Priority,
     Intent,
     TicketStatus,
+    TicketAssignRequest,
 )
 from app.classifier import classify_text_rule_based
 from app.ai_classifier import classify_text_with_ai
@@ -277,7 +279,7 @@ def ticket_to_response(ticket):
         "priority": ticket.priority,
         "intent": ticket.intent,
         "ticket_status": ticket.ticket_status,
-
+        "assigned_to": ticket.assigned_to,
         "summary": ticket.summary,
         "suggested_action": ticket.suggested_action,
         "source": ticket.source,
@@ -383,6 +385,7 @@ def get_tickets(
     priority: Priority | None = Query(None, description="Filter by priority"),
     intent: Intent | None = Query(None, description="Filter by intent"),
     source_channel: SourceChannel | None = Query(None, description="Filter by source channel"),
+    assigned_to: str | None = Query(None, description="Filter by assigned person or team"),
     db: Session = Depends(get_db),
 ):
     tickets = get_ticket_history(
@@ -392,6 +395,7 @@ def get_tickets(
         priority=priority,
         intent=intent,
         source_channel=source_channel,
+        assigned_to=assigned_to,
     )
 
     return [ticket_to_response(ticket) for ticket in tickets]
@@ -501,6 +505,45 @@ def get_comments_for_ticket(
         )
 
     return get_ticket_comments(db=db, ticket_id=ticket_id)
+
+
+@app.patch(
+    "/tickets/{ticket_id}/assign",
+    response_model=TicketHistoryResponse,
+    responses={
+        404: {
+            "description": "Ticket not found",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Ticket not found"
+                    }
+                }
+            },
+        },
+        422: {
+            "description": "Validation error - invalid assigned_to value",
+        },
+    },
+)
+def assign_ticket_endpoint(
+    ticket_id: int,
+    request: TicketAssignRequest,
+    db: Session = Depends(get_db),
+):
+    updated_ticket = assign_ticket(
+        db=db,
+        ticket_id=ticket_id,
+        assigned_to=request.assigned_to,
+    )
+
+    if updated_ticket is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Ticket not found",
+        )
+
+    return ticket_to_response(updated_ticket)
 
 # -----------------------------
 # Endpoint /sync/sqlite-to-mysql

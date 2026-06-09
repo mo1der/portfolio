@@ -121,3 +121,60 @@ def test_filter_tickets_invalid_category(client):
     response = client.get("/tickets?category=INVALID_CATEGORY")
 
     assert response.status_code == 422
+
+def test_filter_tickets_by_assigned_to(client):
+    create_response_1 = client.post(
+        "/process",
+        json={
+            "text": "Mam problem z fakturą.",
+            "source_channel": "CHAT",
+        },
+    )
+
+    assert create_response_1.status_code == 200
+
+    create_response_2 = client.post(
+        "/process",
+        json={
+            "text": "Mam problem z logowaniem.",
+            "source_channel": "CHAT",
+        },
+    )
+
+    assert create_response_2.status_code == 200
+
+    tickets_response = client.get("/tickets")
+    assert tickets_response.status_code == 200
+
+    tickets = tickets_response.json()
+    sorted_tickets = sorted(tickets, key=lambda ticket: ticket["id"], reverse=True)
+
+    first_ticket_id = sorted_tickets[0]["id"]
+    second_ticket_id = sorted_tickets[1]["id"]
+
+    assign_response_1 = client.patch(
+        f"/tickets/{first_ticket_id}/assign",
+        json={
+            "assigned_to": "finance_team",
+        },
+    )
+
+    assert assign_response_1.status_code == 200
+
+    assign_response_2 = client.patch(
+        f"/tickets/{second_ticket_id}/assign",
+        json={
+            "assigned_to": "it_team",
+        },
+    )
+
+    assert assign_response_2.status_code == 200
+
+    response = client.get("/tickets?assigned_to=finance_team")
+
+    assert response.status_code == 200
+
+    filtered_tickets = response.json()
+
+    assert len(filtered_tickets) >= 1
+    assert all(ticket["assigned_to"] == "finance_team" for ticket in filtered_tickets)

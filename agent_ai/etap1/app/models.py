@@ -13,6 +13,7 @@ class TicketHistory(Base):
     priority = Column(String(50), nullable=False)
     intent = Column(String(50), nullable=True)
     ticket_status = Column(String(50), nullable=False, default="NEW")
+    assigned_to = Column(String(100), nullable=True)
     summary = Column(Text, nullable=False)
     suggested_action = Column(Text, nullable=False)
     source = Column(String(50), nullable=True)

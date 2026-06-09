@@ -84,6 +84,16 @@ class TicketStatus(str, Enum):
 class TicketStatusUpdateRequest(BaseModel):
     ticket_status: TicketStatus
 
+class TicketAssignRequest(BaseModel):
+    assigned_to: str = Field(..., min_length=1)
+
+    @field_validator("assigned_to")
+    @classmethod
+    def assigned_to_must_not_be_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Assigned to cannot be empty")
+        return value.strip()
+
 class ClassificationRequest(BaseModel):
     text: str = Field(..., min_length=1)
     source_channel: SourceChannel = SourceChannel.API
@@ -142,6 +152,7 @@ class TicketHistoryResponse(BaseModel):
     priority: Priority
     intent: Intent | None = None
     ticket_status: TicketStatus = TicketStatus.NEW
+    assigned_to: str | None = None
 
     summary: str
     suggested_action: str
