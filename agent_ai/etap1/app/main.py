@@ -378,6 +378,7 @@ def patch_ticket_status(
 
 # -----------------------------
 # Endpoint /tickets
+
 @app.get("/tickets", response_model=list[TicketHistoryResponse])
 def get_tickets(
     status: TicketStatus | None = Query(None, description="Filter by ticket status"),
@@ -386,6 +387,10 @@ def get_tickets(
     intent: Intent | None = Query(None, description="Filter by intent"),
     source_channel: SourceChannel | None = Query(None, description="Filter by source channel"),
     assigned_to: str | None = Query(None, description="Filter by assigned person or team"),
+    limit: int = Query(100, ge=1, le=500, description="Maximum number of tickets to return"),
+    offset: int = Query(0, ge=0, description="Number of tickets to skip"),
+    sort_by: str = Query("created_at", description="Sort field"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order"),
     db: Session = Depends(get_db),
 ):
     tickets = get_ticket_history(
@@ -396,10 +401,13 @@ def get_tickets(
         intent=intent,
         source_channel=source_channel,
         assigned_to=assigned_to,
+        limit=limit,
+        offset=offset,
+        sort_by=sort_by,
+        sort_order=sort_order,
     )
 
     return [ticket_to_response(ticket) for ticket in tickets]
-
 
 @app.get(
     "/tickets/{ticket_id}/status-history",

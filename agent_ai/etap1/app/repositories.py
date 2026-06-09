@@ -82,8 +82,6 @@ def save_ticket_history(db: Session, input_text: str, classification):
 
     return ticket
 
-
-
 def get_ticket_history(
     db,
     ticket_status=None,
@@ -92,6 +90,10 @@ def get_ticket_history(
     intent=None,
     source_channel=None,
     assigned_to=None,
+    limit: int = 100,
+    offset: int = 0,
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
 ):
     query = db.query(TicketHistory)
 
@@ -120,7 +122,25 @@ def get_ticket_history(
     if assigned_to is not None:
         query = query.filter(TicketHistory.assigned_to == assigned_to)
 
-    return query.order_by(TicketHistory.created_at.desc()).all()
+    allowed_sort_fields = {
+        "id": TicketHistory.id,
+        "created_at": TicketHistory.created_at,
+        "category": TicketHistory.category,
+        "priority": TicketHistory.priority,
+        "ticket_status": TicketHistory.ticket_status,
+        "source_channel": TicketHistory.source_channel,
+        "assigned_to": TicketHistory.assigned_to,
+    }
+
+    sort_column = allowed_sort_fields.get(sort_by, TicketHistory.created_at)
+
+    if sort_order == "asc":
+        query = query.order_by(sort_column.asc())
+    else:
+        query = query.order_by(sort_column.desc())
+
+    return query.offset(offset).limit(limit).all()
+
 
 def update_ticket_status(db, ticket_id: int, ticket_status: TicketStatus):
     ticket = db.query(TicketHistory).filter(TicketHistory.id == ticket_id).first()
