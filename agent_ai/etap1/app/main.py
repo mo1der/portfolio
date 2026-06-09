@@ -20,7 +20,6 @@ from app.repositories import (
 from app.ticket_status_rules import is_status_transition_allowed
 from app.agent_router import route_message
 from app.response_builders import build_process_response
-
 from app.schemas import (
     ClassificationRequest,
     ProcessResponse,
@@ -29,8 +28,11 @@ from app.schemas import (
     TicketStatusHistoryResponse,
     SourceChannel,
     EmailAnalyzeRequest,
+    Category,
+    Priority,
+    Intent,
+    TicketStatus,
 )
-
 from app.classifier import classify_text_rule_based
 from app.ai_classifier import classify_text_with_ai
 from app.core.settings import settings
@@ -371,8 +373,23 @@ def patch_ticket_status(
 # -----------------------------
 # Endpoint /tickets
 @app.get("/tickets", response_model=list[TicketHistoryResponse])
-def get_tickets(db: Session = Depends(get_db)):
-    tickets = get_ticket_history(db)
+def get_tickets(
+    status: TicketStatus | None = Query(None, description="Filter by ticket status"),
+    category: Category | None = Query(None, description="Filter by category"),
+    priority: Priority | None = Query(None, description="Filter by priority"),
+    intent: Intent | None = Query(None, description="Filter by intent"),
+    source_channel: SourceChannel | None = Query(None, description="Filter by source channel"),
+    db: Session = Depends(get_db),
+):
+    tickets = get_ticket_history(
+        db=db,
+        ticket_status=status,
+        category=category,
+        priority=priority,
+        intent=intent,
+        source_channel=source_channel,
+    )
+
     return [ticket_to_response(ticket) for ticket in tickets]
 
 

@@ -84,11 +84,39 @@ def save_ticket_history(db: Session, input_text: str, classification):
 
 
 
-def get_ticket_history(db: Session):
-    """
-    Pobiera wszystkie zgłoszenia z bazy, posortowane od najnowszych.
-    """
-    return db.query(TicketHistory).order_by(TicketHistory.id.desc()).all()
+def get_ticket_history(
+    db,
+    ticket_status=None,
+    category=None,
+    priority=None,
+    intent=None,
+    source_channel=None,
+):
+    query = db.query(TicketHistory)
+
+    if ticket_status is not None:
+        status_value = ticket_status.value if hasattr(ticket_status, "value") else ticket_status
+        query = query.filter(TicketHistory.ticket_status == status_value)
+
+    if category is not None:
+        category_value = category.value if hasattr(category, "value") else category
+        query = query.filter(TicketHistory.category == category_value)
+
+    if priority is not None:
+        priority_value = priority.value if hasattr(priority, "value") else priority
+        query = query.filter(TicketHistory.priority == priority_value)
+
+    if intent is not None:
+        intent_value = intent.value if hasattr(intent, "value") else intent
+        query = query.filter(TicketHistory.intent == intent_value)
+
+    if source_channel is not None:
+        source_channel_value = (
+            source_channel.value if hasattr(source_channel, "value") else source_channel
+        )
+        query = query.filter(TicketHistory.source_channel == source_channel_value)
+
+    return query.order_by(TicketHistory.created_at.desc()).all()
 
 def update_ticket_status(db, ticket_id: int, ticket_status: TicketStatus):
     ticket = db.query(TicketHistory).filter(TicketHistory.id == ticket_id).first()
