@@ -162,6 +162,18 @@ class TicketHistoryResponse(BaseModel):
         "from_attributes": True
     }
 
+class TicketStatusHistoryResponse(BaseModel):
+    id: int
+    ticket_id: int
+    old_status: TicketStatus
+    new_status: TicketStatus
+    changed_by: str
+    changed_at: datetime
+
+    model_config = {
+        "from_attributes": True
+    }
+
 
 class EmailAnalyzeRequest(BaseModel):
     from_email: str = Field(..., min_length=3)

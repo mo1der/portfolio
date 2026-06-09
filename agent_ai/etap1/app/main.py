@@ -7,11 +7,30 @@ import pandas as pd
 
 from app.database import Base, engine, get_db
 import app.models
-from app.repositories import get_ticket_history, save_ticket_history, update_ticket_status, get_ticket_by_id
+
+from app.repositories import (
+    get_ticket_history,
+    save_ticket_history,
+    update_ticket_status,
+    get_ticket_by_id,
+    save_ticket_status_history,
+    get_ticket_status_history,
+)
+
 from app.ticket_status_rules import is_status_transition_allowed
 from app.agent_router import route_message
 from app.response_builders import build_process_response
-from app.schemas import ClassificationRequest, ProcessResponse, TicketHistoryResponse, TicketStatusUpdateRequest, SourceChannel, EmailAnalyzeRequest
+
+from app.schemas import (
+    ClassificationRequest,
+    ProcessResponse,
+    TicketHistoryResponse,
+    TicketStatusUpdateRequest,
+    TicketStatusHistoryResponse,
+    SourceChannel,
+    EmailAnalyzeRequest,
+)
+
 from app.classifier import classify_text_rule_based
 from app.ai_classifier import classify_text_with_ai
 from app.core.settings import settings
@@ -328,11 +347,23 @@ def patch_ticket_status(
             ),
         )
 
+    old_status = ticket.ticket_status
+    new_status = request.ticket_status.value
+
     updated_ticket = update_ticket_status(
         db=db,
         ticket_id=ticket_id,
         ticket_status=request.ticket_status,
     )
+
+    if old_status != new_status:
+        save_ticket_status_history(
+            db=db,
+            ticket_id=ticket_id,
+            old_status=old_status,
+            new_status=new_status,
+            changed_by="SYSTEM",
+        )
 
     return ticket_to_response(updated_ticket)
 
@@ -343,6 +374,26 @@ def patch_ticket_status(
 def get_tickets(db: Session = Depends(get_db)):
     tickets = get_ticket_history(db)
     return [ticket_to_response(ticket) for ticket in tickets]
+
+
+@app.get(
+    "/tickets/{ticket_id}/status-history",
+    response_model=list[TicketStatusHistoryResponse],
+)
+def get_status_history(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+):
+    ticket = get_ticket_by_id(db=db, ticket_id=ticket_id)
+
+    if ticket is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Ticket not found",
+        )
+
+    return get_ticket_status_history(db=db, ticket_id=ticket_id)
+
 
 # -----------------------------
 # Endpoint /stats

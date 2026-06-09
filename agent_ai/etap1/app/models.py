@@ -29,3 +29,14 @@ class TicketHistory(Base):
 
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class TicketStatusHistory(Base):
+    __tablename__ = "ticket_status_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ticket_id = Column(Integer, nullable=False, index=True)
+
+    old_status = Column(String(50), nullable=False)
+    new_status = Column(String(50), nullable=False)
+
+    changed_by = Column(String(100), nullable=False, default="SYSTEM")
+    changed_at = Column(DateTime, default=datetime.utcnow)
