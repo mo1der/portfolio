@@ -40,3 +40,14 @@ class TicketStatusHistory(Base):
 
     changed_by = Column(String(100), nullable=False, default="SYSTEM")
     changed_at = Column(DateTime, default=datetime.utcnow)
+
+class TicketComment(Base):
+    __tablename__ = "ticket_comments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ticket_id = Column(Integer, nullable=False, index=True)
+
+    comment_text = Column(Text, nullable=False)
+    author = Column(String(100), nullable=False, default="SYSTEM")
+
+    created_at = Column(DateTime, default=datetime.utcnow)

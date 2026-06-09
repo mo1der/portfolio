@@ -174,6 +174,28 @@ class TicketStatusHistoryResponse(BaseModel):
         "from_attributes": True
     }
 
+class TicketCommentCreateRequest(BaseModel):
+    comment_text: str = Field(..., min_length=1)
+    author: str = "SYSTEM"
+
+    @field_validator("comment_text")
+    @classmethod
+    def comment_text_must_not_be_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Comment text cannot be empty")
+        return value
+
+
+class TicketCommentResponse(BaseModel):
+    id: int
+    ticket_id: int
+    comment_text: str
+    author: str
+    created_at: datetime
+
+    model_config = {
+        "from_attributes": True
+    }
 
 class EmailAnalyzeRequest(BaseModel):
     from_email: str = Field(..., min_length=3)

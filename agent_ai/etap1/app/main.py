@@ -15,6 +15,8 @@ from app.repositories import (
     get_ticket_by_id,
     save_ticket_status_history,
     get_ticket_status_history,
+    create_ticket_comment,
+    get_ticket_comments,
 )
 
 from app.ticket_status_rules import is_status_transition_allowed
@@ -26,6 +28,8 @@ from app.schemas import (
     TicketHistoryResponse,
     TicketStatusUpdateRequest,
     TicketStatusHistoryResponse,
+    TicketCommentCreateRequest,
+    TicketCommentResponse,
     SourceChannel,
     EmailAnalyzeRequest,
     Category,
@@ -451,6 +455,52 @@ def ticket_stats(days: int = Query(30, description="Ilość dni do wstecznej ana
         "total_tickets": len(df_filtered)
     }
     return stats
+
+
+@app.post(
+    "/tickets/{ticket_id}/comments",
+    response_model=TicketCommentResponse,
+)
+def add_ticket_comment(
+    ticket_id: int,
+    request: TicketCommentCreateRequest,
+    db: Session = Depends(get_db),
+):
+    ticket = get_ticket_by_id(db=db, ticket_id=ticket_id)
+
+    if ticket is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Ticket not found",
+        )
+
+    comment = create_ticket_comment(
+        db=db,
+        ticket_id=ticket_id,
+        comment_text=request.comment_text,
+        author=request.author,
+    )
+
+    return comment
+
+
+@app.get(
+    "/tickets/{ticket_id}/comments",
+    response_model=list[TicketCommentResponse],
+)
+def get_comments_for_ticket(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+):
+    ticket = get_ticket_by_id(db=db, ticket_id=ticket_id)
+
+    if ticket is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Ticket not found",
+        )
+
+    return get_ticket_comments(db=db, ticket_id=ticket_id)
 
 # -----------------------------
 # Endpoint /sync/sqlite-to-mysql

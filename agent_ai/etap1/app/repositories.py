@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from app.models import TicketHistory, TicketStatusHistory
+from app.models import TicketHistory, TicketStatusHistory, TicketComment
 from app.schemas import TicketStatus
 
 def save_ticket_history(db: Session, input_text: str, classification):
@@ -159,5 +159,32 @@ def get_ticket_status_history(db, ticket_id: int):
         db.query(TicketStatusHistory)
         .filter(TicketStatusHistory.ticket_id == ticket_id)
         .order_by(TicketStatusHistory.changed_at.asc())
+        .all()
+    )
+
+def create_ticket_comment(
+    db,
+    ticket_id: int,
+    comment_text: str,
+    author: str = "SYSTEM",
+):
+    comment = TicketComment(
+        ticket_id=ticket_id,
+        comment_text=comment_text,
+        author=author,
+    )
+
+    db.add(comment)
+    db.commit()
+    db.refresh(comment)
+
+    return comment
+
+
+def get_ticket_comments(db, ticket_id: int):
+    return (
+        db.query(TicketComment)
+        .filter(TicketComment.ticket_id == ticket_id)
+        .order_by(TicketComment.created_at.asc())
         .all()
     )
