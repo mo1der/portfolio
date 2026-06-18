@@ -19,6 +19,7 @@ from app.repositories import (
     get_ticket_comments,
     assign_ticket,
     count_ticket_history,
+    get_dashboard_summary,
 )
 
 from app.ticket_status_rules import is_status_transition_allowed
@@ -40,6 +41,7 @@ from app.schemas import (
     TicketStatus,
     TicketAssignRequest,
     TicketListResponse,
+    DashboardSummaryResponse,
 )
 from app.classifier import classify_text_rule_based
 from app.ai_classifier import classify_text_with_ai
@@ -489,6 +491,11 @@ def ticket_stats(days: int = Query(30, description="Ilość dni do wstecznej ana
         "total_tickets": len(df_filtered)
     }
     return stats
+
+
+@app.get("/dashboard/summary", response_model=DashboardSummaryResponse)
+def get_dashboard_summary_endpoint(db: Session = Depends(get_db)):
+    return get_dashboard_summary(db)
 
 
 @app.post(

@@ -228,3 +228,15 @@ class EmailAnalyzeRequest(BaseModel):
         if not value.strip():
             raise ValueError("Field cannot be empty")
         return value
+
+class DashboardSummaryResponse(BaseModel):
+    total_tickets: int
+    new_tickets: int
+    in_progress_tickets: int
+    waiting_for_user_tickets: int
+    resolved_tickets: int
+    closed_tickets: int
+    high_priority_tickets: int
+    unassigned_tickets: int
+    ai_classified_tickets: int
+    rule_based_tickets: int

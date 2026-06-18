@@ -288,3 +288,58 @@ def build_ticket_history_query(
         )
 
     return query
+
+def get_dashboard_summary(db):
+    total_tickets = db.query(TicketHistory).count()
+
+    new_tickets = db.query(TicketHistory).filter(
+        TicketHistory.ticket_status == "NEW"
+    ).count()
+
+    in_progress_tickets = db.query(TicketHistory).filter(
+        TicketHistory.ticket_status == "IN_PROGRESS"
+    ).count()
+
+    waiting_for_user_tickets = db.query(TicketHistory).filter(
+        TicketHistory.ticket_status == "WAITING_FOR_USER"
+    ).count()
+
+    resolved_tickets = db.query(TicketHistory).filter(
+        TicketHistory.ticket_status == "RESOLVED"
+    ).count()
+
+    closed_tickets = db.query(TicketHistory).filter(
+        TicketHistory.ticket_status == "CLOSED"
+    ).count()
+
+    high_priority_tickets = db.query(TicketHistory).filter(
+        TicketHistory.priority == "HIGH"
+    ).count()
+
+    unassigned_tickets = db.query(TicketHistory).filter(
+        or_(
+            TicketHistory.assigned_to.is_(None),
+            TicketHistory.assigned_to == "",
+        )
+    ).count()
+
+    ai_classified_tickets = db.query(TicketHistory).filter(
+        TicketHistory.source == "AI"
+    ).count()
+
+    rule_based_tickets = db.query(TicketHistory).filter(
+        TicketHistory.source == "RULE_BASED"
+    ).count()
+
+    return {
+        "total_tickets": total_tickets,
+        "new_tickets": new_tickets,
+        "in_progress_tickets": in_progress_tickets,
+        "waiting_for_user_tickets": waiting_for_user_tickets,
+        "resolved_tickets": resolved_tickets,
+        "closed_tickets": closed_tickets,
+        "high_priority_tickets": high_priority_tickets,
+        "unassigned_tickets": unassigned_tickets,
+        "ai_classified_tickets": ai_classified_tickets,
+        "rule_based_tickets": rule_based_tickets,
+    }
