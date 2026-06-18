@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-
+from sqlalchemy import or_
 from app.models import TicketHistory, TicketStatusHistory, TicketComment
 from app.schemas import TicketStatus
 
@@ -90,6 +90,7 @@ def get_ticket_history(
     intent=None,
     source_channel=None,
     assigned_to=None,
+    search=None,
     limit: int = 100,
     offset: int = 0,
     sort_by: str = "created_at",
@@ -103,6 +104,7 @@ def get_ticket_history(
         intent=intent,
         source_channel=source_channel,
         assigned_to=assigned_to,
+        search=search,
     )
 
     allowed_sort_fields = {
@@ -132,6 +134,7 @@ def count_ticket_history(
     intent=None,
     source_channel=None,
     assigned_to=None,
+    search=None,
 ):
     query = build_ticket_history_query(
         db=db,
@@ -141,6 +144,7 @@ def count_ticket_history(
         intent=intent,
         source_channel=source_channel,
         assigned_to=assigned_to,
+        search=search,
     )
 
     return query.count()
@@ -241,6 +245,7 @@ def build_ticket_history_query(
     intent=None,
     source_channel=None,
     assigned_to=None,
+    search=None,
 ):
     query = db.query(TicketHistory)
 
@@ -268,5 +273,18 @@ def build_ticket_history_query(
 
     if assigned_to is not None:
         query = query.filter(TicketHistory.assigned_to == assigned_to)
+
+    if search is not None and search.strip():
+        search_pattern = f"%{search.strip()}%"
+
+        query = query.filter(
+            or_(
+                TicketHistory.input_text.ilike(search_pattern),
+                TicketHistory.summary.ilike(search_pattern),
+                TicketHistory.suggested_action.ilike(search_pattern),
+                TicketHistory.executed_action_message.ilike(search_pattern),
+                TicketHistory.route_reason.ilike(search_pattern),
+            )
+        )
 
     return query

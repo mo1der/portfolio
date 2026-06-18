@@ -389,6 +389,7 @@ def get_tickets(
     intent: Intent | None = Query(None, description="Filter by intent"),
     source_channel: SourceChannel | None = Query(None, description="Filter by source channel"),
     assigned_to: str | None = Query(None, description="Filter by assigned person or team"),
+    search: str | None = Query(None, description="Search text in ticket fields"),
     limit: int = Query(100, ge=1, le=500, description="Maximum number of tickets to return"),
     offset: int = Query(0, ge=0, description="Number of tickets to skip"),
     sort_by: str = Query("created_at", description="Sort field"),
@@ -403,6 +404,7 @@ def get_tickets(
         intent=intent,
         source_channel=source_channel,
         assigned_to=assigned_to,
+        search=search,
         limit=limit,
         offset=offset,
         sort_by=sort_by,
@@ -417,6 +419,7 @@ def get_tickets(
         intent=intent,
         source_channel=source_channel,
         assigned_to=assigned_to,
+        search=search,
     )
 
     return {
