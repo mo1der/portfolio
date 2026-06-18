@@ -16,7 +16,7 @@ def test_classify_saves_ticket_history(client):
 
     assert history_response.status_code == 200
 
-    tickets = history_response.json()
+    tickets = history_response.json()["items"]
 
     matching_tickets = [
         ticket for ticket in tickets

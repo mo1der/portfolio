@@ -12,7 +12,7 @@ def test_get_ticket_by_id(client):
     tickets_response = client.get("/tickets")
     assert tickets_response.status_code == 200
 
-    tickets = tickets_response.json()
+    tickets = tickets_response.json()["items"]
     latest_ticket = max(tickets, key=lambda ticket: ticket["id"])
     ticket_id = latest_ticket["id"]
 

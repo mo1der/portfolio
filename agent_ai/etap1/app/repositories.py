@@ -95,32 +95,15 @@ def get_ticket_history(
     sort_by: str = "created_at",
     sort_order: str = "desc",
 ):
-    query = db.query(TicketHistory)
-
-    if ticket_status is not None:
-        status_value = ticket_status.value if hasattr(ticket_status, "value") else ticket_status
-        query = query.filter(TicketHistory.ticket_status == status_value)
-
-    if category is not None:
-        category_value = category.value if hasattr(category, "value") else category
-        query = query.filter(TicketHistory.category == category_value)
-
-    if priority is not None:
-        priority_value = priority.value if hasattr(priority, "value") else priority
-        query = query.filter(TicketHistory.priority == priority_value)
-
-    if intent is not None:
-        intent_value = intent.value if hasattr(intent, "value") else intent
-        query = query.filter(TicketHistory.intent == intent_value)
-
-    if source_channel is not None:
-        source_channel_value = (
-            source_channel.value if hasattr(source_channel, "value") else source_channel
-        )
-        query = query.filter(TicketHistory.source_channel == source_channel_value)
-
-    if assigned_to is not None:
-        query = query.filter(TicketHistory.assigned_to == assigned_to)
+    query = build_ticket_history_query(
+        db=db,
+        ticket_status=ticket_status,
+        category=category,
+        priority=priority,
+        intent=intent,
+        source_channel=source_channel,
+        assigned_to=assigned_to,
+    )
 
     allowed_sort_fields = {
         "id": TicketHistory.id,
@@ -141,6 +124,26 @@ def get_ticket_history(
 
     return query.offset(offset).limit(limit).all()
 
+def count_ticket_history(
+    db,
+    ticket_status=None,
+    category=None,
+    priority=None,
+    intent=None,
+    source_channel=None,
+    assigned_to=None,
+):
+    query = build_ticket_history_query(
+        db=db,
+        ticket_status=ticket_status,
+        category=category,
+        priority=priority,
+        intent=intent,
+        source_channel=source_channel,
+        assigned_to=assigned_to,
+    )
+
+    return query.count()
 
 def update_ticket_status(db, ticket_id: int, ticket_status: TicketStatus):
     ticket = db.query(TicketHistory).filter(TicketHistory.id == ticket_id).first()
@@ -229,3 +232,41 @@ def assign_ticket(
     db.refresh(ticket)
 
     return ticket
+
+def build_ticket_history_query(
+    db,
+    ticket_status=None,
+    category=None,
+    priority=None,
+    intent=None,
+    source_channel=None,
+    assigned_to=None,
+):
+    query = db.query(TicketHistory)
+
+    if ticket_status is not None:
+        status_value = ticket_status.value if hasattr(ticket_status, "value") else ticket_status
+        query = query.filter(TicketHistory.ticket_status == status_value)
+
+    if category is not None:
+        category_value = category.value if hasattr(category, "value") else category
+        query = query.filter(TicketHistory.category == category_value)
+
+    if priority is not None:
+        priority_value = priority.value if hasattr(priority, "value") else priority
+        query = query.filter(TicketHistory.priority == priority_value)
+
+    if intent is not None:
+        intent_value = intent.value if hasattr(intent, "value") else intent
+        query = query.filter(TicketHistory.intent == intent_value)
+
+    if source_channel is not None:
+        source_channel_value = (
+            source_channel.value if hasattr(source_channel, "value") else source_channel
+        )
+        query = query.filter(TicketHistory.source_channel == source_channel_value)
+
+    if assigned_to is not None:
+        query = query.filter(TicketHistory.assigned_to == assigned_to)
+
+    return query

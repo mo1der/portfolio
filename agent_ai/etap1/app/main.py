@@ -18,6 +18,7 @@ from app.repositories import (
     create_ticket_comment,
     get_ticket_comments,
     assign_ticket,
+    count_ticket_history,
 )
 
 from app.ticket_status_rules import is_status_transition_allowed
@@ -38,6 +39,7 @@ from app.schemas import (
     Intent,
     TicketStatus,
     TicketAssignRequest,
+    TicketListResponse,
 )
 from app.classifier import classify_text_rule_based
 from app.ai_classifier import classify_text_with_ai
@@ -379,7 +381,7 @@ def patch_ticket_status(
 # -----------------------------
 # Endpoint /tickets
 
-@app.get("/tickets", response_model=list[TicketHistoryResponse])
+@app.get("/tickets", response_model=TicketListResponse)
 def get_tickets(
     status: TicketStatus | None = Query(None, description="Filter by ticket status"),
     category: Category | None = Query(None, description="Filter by category"),
@@ -407,7 +409,24 @@ def get_tickets(
         sort_order=sort_order,
     )
 
-    return [ticket_to_response(ticket) for ticket in tickets]
+    total = count_ticket_history(
+        db=db,
+        ticket_status=status,
+        category=category,
+        priority=priority,
+        intent=intent,
+        source_channel=source_channel,
+        assigned_to=assigned_to,
+    )
+
+    return {
+        "items": [ticket_to_response(ticket) for ticket in tickets],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "has_next": offset + limit < total,
+        "has_previous": offset > 0,
+    }
 
 @app.get(
     "/tickets/{ticket_id}/status-history",

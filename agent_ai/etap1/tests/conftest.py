@@ -52,3 +52,16 @@ def client():
         yield c
 
     Base.metadata.drop_all(bind=TEST_ENGINE)
+
+def get_ticket_items(response):
+    data = response.json()
+
+    if isinstance(data, list):
+        return data
+
+    return data["items"]
+
+
+def get_latest_ticket(response):
+    tickets = get_ticket_items(response)
+    return max(tickets, key=lambda ticket: ticket["id"])

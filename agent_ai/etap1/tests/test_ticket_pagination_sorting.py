@@ -13,9 +13,11 @@ def test_tickets_limit(client):
 
     assert response.status_code == 200
 
-    tickets = response.json()
+    data = response.json()
+    tickets = data["items"]
 
     assert len(tickets) == 2
+    assert data["limit"] == 2
 
 
 def test_tickets_offset(client):
@@ -35,8 +37,8 @@ def test_tickets_offset(client):
     assert first_page_response.status_code == 200
     assert second_page_response.status_code == 200
 
-    first_page = first_page_response.json()
-    second_page = second_page_response.json()
+    first_page = first_page_response.json()["items"]
+    second_page = second_page_response.json()["items"]
 
     assert len(first_page) == 1
     assert len(second_page) == 1
@@ -58,7 +60,7 @@ def test_tickets_sort_by_id_asc(client):
 
     assert response.status_code == 200
 
-    tickets = response.json()
+    tickets = response.json()["items"]
     ids = [ticket["id"] for ticket in tickets]
 
     assert ids == sorted(ids)
@@ -79,7 +81,7 @@ def test_tickets_sort_by_id_desc(client):
 
     assert response.status_code == 200
 
-    tickets = response.json()
+    tickets = response.json()["items"]
     ids = [ticket["id"] for ticket in tickets]
 
     assert ids == sorted(ids, reverse=True)
@@ -126,8 +128,10 @@ def test_tickets_filters_with_pagination(client):
 
     assert response.status_code == 200
 
-    tickets = response.json()
+    data = response.json()
+    tickets = data["items"]
 
     assert len(tickets) == 1
+    assert data["limit"] == 1
     assert tickets[0]["category"] == "FINANCE"
     assert tickets[0]["source_channel"] == "EMAIL"

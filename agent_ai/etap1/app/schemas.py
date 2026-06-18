@@ -173,6 +173,14 @@ class TicketHistoryResponse(BaseModel):
         "from_attributes": True
     }
 
+class TicketListResponse(BaseModel):
+    items: list[TicketHistoryResponse]
+    total: int
+    limit: int
+    offset: int
+    has_next: bool
+    has_previous: bool
+
 class TicketStatusHistoryResponse(BaseModel):
     id: int
     ticket_id: int

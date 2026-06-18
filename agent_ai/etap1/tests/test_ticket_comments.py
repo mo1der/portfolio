@@ -12,7 +12,7 @@ def test_add_ticket_comment(client):
     tickets_response = client.get("/tickets")
     assert tickets_response.status_code == 200
 
-    tickets = tickets_response.json()
+    tickets = tickets_response.json()["items"]
     latest_ticket = max(tickets, key=lambda ticket: ticket["id"])
     ticket_id = latest_ticket["id"]
 
@@ -48,7 +48,7 @@ def test_get_ticket_comments(client):
     tickets_response = client.get("/tickets")
     assert tickets_response.status_code == 200
 
-    tickets = tickets_response.json()
+    tickets = tickets_response.json()["items"]
     latest_ticket = max(tickets, key=lambda ticket: ticket["id"])
     ticket_id = latest_ticket["id"]
 
@@ -111,7 +111,7 @@ def test_add_ticket_comment_blank_text(client):
     assert create_response.status_code == 200
 
     tickets_response = client.get("/tickets")
-    tickets = tickets_response.json()
+    tickets = tickets_response.json()["items"]
     latest_ticket = max(tickets, key=lambda ticket: ticket["id"])
     ticket_id = latest_ticket["id"]
 

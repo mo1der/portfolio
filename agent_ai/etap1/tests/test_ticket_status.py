@@ -15,7 +15,7 @@ def test_update_ticket_status(client):
 
     assert tickets_response.status_code == 200
 
-    tickets = tickets_response.json()
+    tickets = tickets_response.json()["items"]
 
     assert len(tickets) > 0
 
@@ -76,7 +76,7 @@ def test_update_ticket_status_invalid_transition_from_new_to_closed(client):
     tickets_response = client.get("/tickets")
     assert tickets_response.status_code == 200
 
-    tickets = tickets_response.json()
+    tickets = tickets_response.json()["items"]
     latest_ticket = max(tickets, key=lambda ticket: ticket["id"])
     ticket_id = latest_ticket["id"]
 
@@ -105,7 +105,7 @@ def test_update_ticket_status_valid_full_flow(client):
     tickets_response = client.get("/tickets")
     assert tickets_response.status_code == 200
 
-    tickets = tickets_response.json()
+    tickets = tickets_response.json()["items"]
     latest_ticket = max(tickets, key=lambda ticket: ticket["id"])
     ticket_id = latest_ticket["id"]
 
@@ -163,7 +163,7 @@ def test_update_ticket_status_same_status_is_allowed(client):
     tickets_response = client.get("/tickets")
     assert tickets_response.status_code == 200
 
-    tickets = tickets_response.json()
+    tickets = tickets_response.json()["items"]
     latest_ticket = max(tickets, key=lambda ticket: ticket["id"])
     ticket_id = latest_ticket["id"]
 
