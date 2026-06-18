@@ -247,3 +247,18 @@ class DashboardCountItem(BaseModel):
 
 class DashboardCountsResponse(BaseModel):
     items: list[DashboardCountItem]
+
+class DashboardRecentTicketItem(BaseModel):
+    id: int
+    input_text: str
+    category: Category
+    priority: Priority
+    intent: Intent
+    ticket_status: TicketStatus
+    assigned_to: str | None = None
+    source: str | None = None
+    created_at: datetime
+
+
+class DashboardRecentTicketsResponse(BaseModel):
+    items: list[DashboardRecentTicketItem]

@@ -21,6 +21,7 @@ from app.repositories import (
     count_ticket_history,
     get_dashboard_summary,
     get_dashboard_counts_by_field,
+    get_recent_tickets,
 )
 
 from app.ticket_status_rules import is_status_transition_allowed
@@ -44,6 +45,7 @@ from app.schemas import (
     TicketListResponse,
     DashboardSummaryResponse,
     DashboardCountsResponse,
+    DashboardRecentTicketsResponse,
 )
 from app.classifier import classify_text_rule_based
 from app.ai_classifier import classify_text_with_ai
@@ -498,6 +500,18 @@ def ticket_stats(days: int = Query(30, description="Ilość dni do wstecznej ana
 @app.get("/dashboard/summary", response_model=DashboardSummaryResponse)
 def get_dashboard_summary_endpoint(db: Session = Depends(get_db)):
     return get_dashboard_summary(db)
+
+
+@app.get("/dashboard/recent-tickets", response_model=DashboardRecentTicketsResponse)
+def get_dashboard_recent_tickets(
+    limit: int = 5,
+    db: Session = Depends(get_db),
+):
+    tickets = get_recent_tickets(db, limit=limit)
+
+    return {
+        "items": tickets
+    }
 
 @app.get("/dashboard/status-counts", response_model=DashboardCountsResponse)
 def get_dashboard_status_counts(db: Session = Depends(get_db)):
