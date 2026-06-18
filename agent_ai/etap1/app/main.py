@@ -23,6 +23,7 @@ from app.repositories import (
     get_dashboard_counts_by_field,
     get_recent_tickets,
     get_urgent_tickets,
+    get_unassigned_tickets,
 )
 
 from app.ticket_status_rules import is_status_transition_allowed
@@ -520,6 +521,17 @@ def get_dashboard_urgent_tickets(
     db: Session = Depends(get_db),
 ):
     tickets = get_urgent_tickets(db, limit=limit)
+
+    return {
+        "items": tickets
+    }
+
+@app.get("/dashboard/unassigned-tickets", response_model=DashboardRecentTicketsResponse)
+def get_dashboard_unassigned_tickets(
+    limit: int = 5,
+    db: Session = Depends(get_db),
+):
+    tickets = get_unassigned_tickets(db, limit=limit)
 
     return {
         "items": tickets

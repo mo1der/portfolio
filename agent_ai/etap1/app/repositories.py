@@ -405,3 +405,20 @@ def get_urgent_tickets(db, limit: int = 5):
         .limit(safe_limit)
         .all()
     )
+
+def get_unassigned_tickets(db, limit: int = 5):
+    safe_limit = max(1, min(limit, 20))
+
+    return (
+        db.query(TicketHistory)
+        .filter(
+            or_(
+                TicketHistory.assigned_to.is_(None),
+                TicketHistory.assigned_to == "",
+            )
+        )
+        .filter(TicketHistory.ticket_status != "CLOSED")
+        .order_by(TicketHistory.created_at.desc())
+        .limit(safe_limit)
+        .all()
+    )
