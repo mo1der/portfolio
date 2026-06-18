@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from app.models import TicketHistory, TicketStatusHistory, TicketComment
 from app.schemas import TicketStatus
 
@@ -342,4 +342,44 @@ def get_dashboard_summary(db):
         "unassigned_tickets": unassigned_tickets,
         "ai_classified_tickets": ai_classified_tickets,
         "rule_based_tickets": rule_based_tickets,
+    }
+
+def get_dashboard_counts_by_field(db, field_name: str):
+    allowed_fields = {
+        "ticket_status": TicketHistory.ticket_status,
+        "category": TicketHistory.category,
+        "priority": TicketHistory.priority,
+        "source": TicketHistory.source,
+        "assigned_to": TicketHistory.assigned_to,
+    }
+
+    field = allowed_fields.get(field_name)
+
+    if field is None:
+        return []
+
+    results = (
+        db.query(field, func.count(TicketHistory.id))
+        .group_by(field)
+        .order_by(func.count(TicketHistory.id).desc())
+        .all()
+    )
+
+    items = []
+
+    for name, count in results:
+        if name is None or name == "":
+            display_name = "UNASSIGNED"
+        else:
+            display_name = str(name)
+
+        items.append(
+            {
+                "name": display_name,
+                "count": count,
+            }
+        )
+
+    return {
+        "items": items
     }

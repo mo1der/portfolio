@@ -240,3 +240,10 @@ class DashboardSummaryResponse(BaseModel):
     unassigned_tickets: int
     ai_classified_tickets: int
     rule_based_tickets: int
+
+class DashboardCountItem(BaseModel):
+    name: str
+    count: int
+
+class DashboardCountsResponse(BaseModel):
+    items: list[DashboardCountItem]

@@ -20,6 +20,7 @@ from app.repositories import (
     assign_ticket,
     count_ticket_history,
     get_dashboard_summary,
+    get_dashboard_counts_by_field,
 )
 
 from app.ticket_status_rules import is_status_transition_allowed
@@ -42,6 +43,7 @@ from app.schemas import (
     TicketAssignRequest,
     TicketListResponse,
     DashboardSummaryResponse,
+    DashboardCountsResponse,
 )
 from app.classifier import classify_text_rule_based
 from app.ai_classifier import classify_text_with_ai
@@ -497,6 +499,29 @@ def ticket_stats(days: int = Query(30, description="Ilość dni do wstecznej ana
 def get_dashboard_summary_endpoint(db: Session = Depends(get_db)):
     return get_dashboard_summary(db)
 
+@app.get("/dashboard/status-counts", response_model=DashboardCountsResponse)
+def get_dashboard_status_counts(db: Session = Depends(get_db)):
+    return get_dashboard_counts_by_field(db, "ticket_status")
+
+
+@app.get("/dashboard/category-counts", response_model=DashboardCountsResponse)
+def get_dashboard_category_counts(db: Session = Depends(get_db)):
+    return get_dashboard_counts_by_field(db, "category")
+
+
+@app.get("/dashboard/priority-counts", response_model=DashboardCountsResponse)
+def get_dashboard_priority_counts(db: Session = Depends(get_db)):
+    return get_dashboard_counts_by_field(db, "priority")
+
+
+@app.get("/dashboard/source-counts", response_model=DashboardCountsResponse)
+def get_dashboard_source_counts(db: Session = Depends(get_db)):
+    return get_dashboard_counts_by_field(db, "source")
+
+
+@app.get("/dashboard/assigned-counts", response_model=DashboardCountsResponse)
+def get_dashboard_assigned_counts(db: Session = Depends(get_db)):
+    return get_dashboard_counts_by_field(db, "assigned_to")
 
 @app.post(
     "/tickets/{ticket_id}/comments",
