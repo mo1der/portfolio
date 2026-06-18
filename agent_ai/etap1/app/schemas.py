@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
 class ExecutedAction(BaseModel):
@@ -85,7 +85,9 @@ class TicketStatusUpdateRequest(BaseModel):
     ticket_status: TicketStatus
 
 class TicketAssignRequest(BaseModel):
-    assigned_to: str = Field(..., min_length=1)
+    assigned_to: str | None = None
+    changed_by: str | None = None
+    note: str | None = None
 
     @field_validator("assigned_to")
     @classmethod
@@ -281,3 +283,14 @@ class DashboardTicketsByDayItem(BaseModel):
 
 class DashboardTicketsByDayResponse(BaseModel):
     items: list[DashboardTicketsByDayItem]
+
+class TicketAssignmentHistoryResponse(BaseModel):
+    id: int
+    ticket_id: int
+    old_assigned_to: str | None = None
+    new_assigned_to: str | None = None
+    changed_by: str | None = None
+    note: str | None = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

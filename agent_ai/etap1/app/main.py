@@ -25,6 +25,7 @@ from app.repositories import (
     get_urgent_tickets,
     get_unassigned_tickets,
     get_tickets_by_day,
+    get_ticket_assignment_history,
 )
 
 from app.ticket_status_rules import is_status_transition_allowed
@@ -51,6 +52,7 @@ from app.schemas import (
     DashboardRecentTicketsResponse,
     DashboardOverviewResponse,
     DashboardTicketsByDayResponse,
+    TicketAssignmentHistoryResponse,
 
 )
 from app.classifier import classify_text_rule_based
@@ -660,6 +662,7 @@ def get_comments_for_ticket(
         },
     },
 )
+
 def assign_ticket_endpoint(
     ticket_id: int,
     request: TicketAssignRequest,
@@ -669,6 +672,8 @@ def assign_ticket_endpoint(
         db=db,
         ticket_id=ticket_id,
         assigned_to=request.assigned_to,
+        changed_by=request.changed_by,
+        note=request.note,
     )
 
     if updated_ticket is None:
@@ -678,6 +683,26 @@ def assign_ticket_endpoint(
         )
 
     return ticket_to_response(updated_ticket)
+
+
+
+@app.get(
+    "/tickets/{ticket_id}/assignment-history",
+    response_model=list[TicketAssignmentHistoryResponse],
+)
+def get_ticket_assignment_history_endpoint(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+):
+    ticket = get_ticket_by_id(db=db, ticket_id=ticket_id)
+
+    if ticket is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Ticket not found",
+        )
+
+    return get_ticket_assignment_history(db=db, ticket_id=ticket_id)
 
 # -----------------------------
 # Endpoint /sync/sqlite-to-mysql
@@ -712,3 +737,21 @@ def sync_sqlite_to_mysql():
             "status": "failed",
             "message": str(error),
         }
+
+@app.get(
+    "/tickets/{ticket_id}/assignment-history",
+    response_model=list[TicketAssignmentHistoryResponse],
+)
+def get_ticket_assignment_history_endpoint(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+):
+    ticket = get_ticket_by_id(db=db, ticket_id=ticket_id)
+
+    if ticket is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Ticket not found",
+        )
+
+    return get_ticket_assignment_history(db=db, ticket_id=ticket_id)

@@ -52,3 +52,17 @@ class TicketComment(Base):
     author = Column(String(100), nullable=False, default="SYSTEM")
 
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class TicketAssignmentHistory(Base):
+    __tablename__ = "ticket_assignment_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ticket_id = Column(Integer, nullable=False, index=True)
+
+    old_assigned_to = Column(String(100), nullable=True)
+    new_assigned_to = Column(String(100), nullable=True)
+
+    changed_by = Column(String(100), nullable=True)
+    note = Column(Text, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)

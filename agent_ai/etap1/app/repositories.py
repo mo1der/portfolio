@@ -1,6 +1,12 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, func
-from app.models import TicketHistory, TicketStatusHistory, TicketComment
+from app.models import (
+    TicketHistory,
+    TicketStatusHistory,
+    TicketComment,
+    TicketAssignmentHistory,
+    )
+
 from app.schemas import TicketStatus
 
 def save_ticket_history(db: Session, input_text: str, classification):
@@ -223,19 +229,34 @@ def get_ticket_comments(db, ticket_id: int):
 def assign_ticket(
     db,
     ticket_id: int,
-    assigned_to: str,
+    assigned_to: str | None,
+    changed_by: str | None = None,
+    note: str | None = None,
 ):
-    ticket = get_ticket_by_id(db=db, ticket_id=ticket_id)
+    ticket = db.query(TicketHistory).filter(TicketHistory.id == ticket_id).first()
 
     if ticket is None:
         return None
 
+    old_assigned_to = ticket.assigned_to
+
     ticket.assigned_to = assigned_to
 
+    db.add(ticket)
     db.commit()
     db.refresh(ticket)
 
+    create_ticket_assignment_history(
+        db=db,
+        ticket_id=ticket.id,
+        old_assigned_to=old_assigned_to,
+        new_assigned_to=assigned_to,
+        changed_by=changed_by,
+        note=note,
+    )
+
     return ticket
+
 
 def build_ticket_history_query(
     db,
@@ -447,3 +468,34 @@ def get_tickets_by_day(db):
     return {
         "items": items
     }
+
+def create_ticket_assignment_history(
+    db,
+    ticket_id: int,
+    old_assigned_to: str | None,
+    new_assigned_to: str | None,
+    changed_by: str | None = None,
+    note: str | None = None,
+):
+    history = TicketAssignmentHistory(
+        ticket_id=ticket_id,
+        old_assigned_to=old_assigned_to,
+        new_assigned_to=new_assigned_to,
+        changed_by=changed_by,
+        note=note,
+    )
+
+    db.add(history)
+    db.commit()
+    db.refresh(history)
+
+    return history
+
+
+def get_ticket_assignment_history(db, ticket_id: int):
+    return (
+        db.query(TicketAssignmentHistory)
+        .filter(TicketAssignmentHistory.ticket_id == ticket_id)
+        .order_by(TicketAssignmentHistory.created_at.asc())
+        .all()
+    )
