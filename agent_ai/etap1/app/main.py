@@ -24,6 +24,7 @@ from app.repositories import (
     get_recent_tickets,
     get_urgent_tickets,
     get_unassigned_tickets,
+    get_tickets_by_day,
 )
 
 from app.ticket_status_rules import is_status_transition_allowed
@@ -48,6 +49,9 @@ from app.schemas import (
     DashboardSummaryResponse,
     DashboardCountsResponse,
     DashboardRecentTicketsResponse,
+    DashboardOverviewResponse,
+    DashboardTicketsByDayResponse,
+
 )
 from app.classifier import classify_text_rule_based
 from app.ai_classifier import classify_text_with_ai
@@ -503,6 +507,30 @@ def ticket_stats(days: int = Query(30, description="Ilość dni do wstecznej ana
 def get_dashboard_summary_endpoint(db: Session = Depends(get_db)):
     return get_dashboard_summary(db)
 
+@app.get("/dashboard/overview", response_model=DashboardOverviewResponse)
+def get_dashboard_overview(
+    limit: int = 5,
+    db: Session = Depends(get_db),
+):
+    safe_limit = max(1, min(limit, 20))
+
+    return {
+        "summary": get_dashboard_summary(db),
+        "status_counts": get_dashboard_counts_by_field(db, "ticket_status"),
+        "category_counts": get_dashboard_counts_by_field(db, "category"),
+        "priority_counts": get_dashboard_counts_by_field(db, "priority"),
+        "source_counts": get_dashboard_counts_by_field(db, "source"),
+        "assigned_counts": get_dashboard_counts_by_field(db, "assigned_to"),
+        "recent_tickets": {
+            "items": get_recent_tickets(db, limit=safe_limit)
+        },
+        "urgent_tickets": {
+            "items": get_urgent_tickets(db, limit=safe_limit)
+        },
+        "unassigned_tickets": {
+            "items": get_unassigned_tickets(db, limit=safe_limit)
+        },
+    }
 
 @app.get("/dashboard/recent-tickets", response_model=DashboardRecentTicketsResponse)
 def get_dashboard_recent_tickets(
@@ -560,6 +588,12 @@ def get_dashboard_source_counts(db: Session = Depends(get_db)):
 @app.get("/dashboard/assigned-counts", response_model=DashboardCountsResponse)
 def get_dashboard_assigned_counts(db: Session = Depends(get_db)):
     return get_dashboard_counts_by_field(db, "assigned_to")
+
+@app.get("/dashboard/tickets-by-day", response_model=DashboardTicketsByDayResponse)
+def get_dashboard_tickets_by_day(
+    db: Session = Depends(get_db),
+):
+    return get_tickets_by_day(db)
 
 @app.post(
     "/tickets/{ticket_id}/comments",

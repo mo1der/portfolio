@@ -422,3 +422,28 @@ def get_unassigned_tickets(db, limit: int = 5):
         .limit(safe_limit)
         .all()
     )
+
+def get_tickets_by_day(db):
+    results = (
+        db.query(
+            func.date(TicketHistory.created_at),
+            func.count(TicketHistory.id),
+        )
+        .group_by(func.date(TicketHistory.created_at))
+        .order_by(func.date(TicketHistory.created_at).asc())
+        .all()
+    )
+
+    items = []
+
+    for date_value, count in results:
+        items.append(
+            {
+                "date": str(date_value),
+                "count": count,
+            }
+        )
+
+    return {
+        "items": items
+    }

@@ -262,3 +262,22 @@ class DashboardRecentTicketItem(BaseModel):
 
 class DashboardRecentTicketsResponse(BaseModel):
     items: list[DashboardRecentTicketItem]
+
+class DashboardOverviewResponse(BaseModel):
+    summary: DashboardSummaryResponse
+    status_counts: DashboardCountsResponse
+    category_counts: DashboardCountsResponse
+    priority_counts: DashboardCountsResponse
+    source_counts: DashboardCountsResponse
+    assigned_counts: DashboardCountsResponse
+    recent_tickets: DashboardRecentTicketsResponse
+    urgent_tickets: DashboardRecentTicketsResponse
+    unassigned_tickets: DashboardRecentTicketsResponse
+
+class DashboardTicketsByDayItem(BaseModel):
+    date: str
+    count: int
+
+
+class DashboardTicketsByDayResponse(BaseModel):
+    items: list[DashboardTicketsByDayItem]
