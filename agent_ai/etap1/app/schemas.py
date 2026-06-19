@@ -247,6 +247,10 @@ class DashboardSummaryResponse(BaseModel):
     unassigned_tickets: int
     ai_classified_tickets: int
     rule_based_tickets: int
+    breached_sla_tickets: int
+    active_sla_tickets: int
+    completed_sla_tickets: int
+    unknown_sla_tickets: int
 
 class DashboardCountItem(BaseModel):
     name: str

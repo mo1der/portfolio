@@ -412,6 +412,26 @@ def get_dashboard_summary(db):
         TicketHistory.source == "RULE_BASED"
     ).count()
 
+    breached_sla_tickets = db.query(TicketHistory).filter(
+        TicketHistory.sla_status == "BREACHED"
+    ).count()
+
+    active_sla_tickets = db.query(TicketHistory).filter(
+        TicketHistory.sla_status == "ACTIVE"
+    ).count()
+
+    completed_sla_tickets = db.query(TicketHistory).filter(
+        TicketHistory.sla_status == "COMPLETED"
+    ).count()
+
+    unknown_sla_tickets = db.query(TicketHistory).filter(
+        or_(
+            TicketHistory.sla_status.is_(None),
+            TicketHistory.sla_status == "",
+            TicketHistory.sla_status == "UNKNOWN",
+        )
+    ).count()
+
     return {
         "total_tickets": total_tickets,
         "new_tickets": new_tickets,
@@ -423,6 +443,10 @@ def get_dashboard_summary(db):
         "unassigned_tickets": unassigned_tickets,
         "ai_classified_tickets": ai_classified_tickets,
         "rule_based_tickets": rule_based_tickets,
+        "breached_sla_tickets": breached_sla_tickets,
+        "active_sla_tickets": active_sla_tickets,
+        "completed_sla_tickets": completed_sla_tickets,
+        "unknown_sla_tickets": unknown_sla_tickets,
     }
 
 
