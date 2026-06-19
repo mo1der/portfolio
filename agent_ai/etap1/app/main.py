@@ -33,6 +33,7 @@ from app.repositories import (
     get_tickets_by_day,
     get_ticket_assignment_history,
     get_ticket_timeline,
+    get_breached_sla_tickets,
 )
 
 from app.ticket_status_rules import is_status_transition_allowed
@@ -308,6 +309,9 @@ def ticket_to_response(ticket):
         "suggested_action": ticket.suggested_action,
         "source": ticket.source,
 
+        "sla_due_at": ticket.sla_due_at,
+        "sla_status": ticket.sla_status,
+
         "executed_action_type": ticket.executed_action_type,
         "executed_action_status": ticket.executed_action_status,
         "executed_action_message": ticket.executed_action_message,
@@ -321,7 +325,6 @@ def ticket_to_response(ticket):
 
         "created_at": ticket.created_at,
     }
-
 
 # -----------------------------
 
@@ -673,6 +676,17 @@ def get_ticket_timeline_endpoint(
 
     return timeline
 
+@app.get("/tickets/sla/breached", response_model=list[TicketHistoryResponse])
+def get_breached_sla_tickets_endpoint(
+    limit: int = Query(100, ge=1, le=500),
+    db: Session = Depends(get_db),
+):
+    tickets = get_breached_sla_tickets(
+        db=db,
+        limit=limit,
+    )
+
+    return [ticket_to_response(ticket) for ticket in tickets]
 
 @app.get("/tickets/{ticket_id}", response_model=TicketHistoryResponse)
 def get_ticket(
@@ -896,24 +910,6 @@ def assign_ticket_endpoint(
     return ticket_to_response(updated_ticket)
 
 
-
-@app.get(
-    "/tickets/{ticket_id}/assignment-history",
-    response_model=list[TicketAssignmentHistoryResponse],
-)
-def get_ticket_assignment_history_endpoint(
-    ticket_id: int,
-    db: Session = Depends(get_db),
-):
-    ticket = get_ticket_by_id(db=db, ticket_id=ticket_id)
-
-    if ticket is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Ticket not found",
-        )
-
-    return get_ticket_assignment_history(db=db, ticket_id=ticket_id)
 
 # -----------------------------
 # Endpoint /sync/sqlite-to-mysql

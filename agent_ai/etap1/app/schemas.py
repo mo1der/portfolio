@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Optional
 
@@ -161,7 +161,8 @@ class TicketHistoryResponse(BaseModel):
     summary: str
     suggested_action: str
     source: str | None = None
-
+    sla_due_at: datetime | None = None
+    sla_status: str | None = None
     executed_action_type: str | None = None
     executed_action_status: str | None = None
     executed_action_message: str | None = None
@@ -309,3 +310,30 @@ class TicketTimelineItem(BaseModel):
 
 class TicketTimelineResponse(BaseModel):
     items: list[TicketTimelineItem]
+
+def calculate_sla_due_at(created_at, priority: str):
+    if priority == "HIGH":
+        return created_at + timedelta(hours=4)
+
+    if priority == "MEDIUM":
+        return created_at + timedelta(hours=24)
+
+    if priority == "LOW":
+        return created_at + timedelta(hours=72)
+
+    return created_at + timedelta(hours=24)
+
+
+def calculate_sla_status(ticket):
+    if ticket.ticket_status in ["RESOLVED", "CLOSED"]:
+        return "COMPLETED"
+
+    if ticket.sla_due_at is None:
+        return "UNKNOWN"
+
+    now = datetime.utcnow()
+
+    if now > ticket.sla_due_at:
+        return "BREACHED"
+
+    return "ACTIVE"

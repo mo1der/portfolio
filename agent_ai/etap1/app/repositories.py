@@ -1,13 +1,45 @@
+from datetime import datetime, timedelta
+
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, func
+
 from app.models import (
     TicketHistory,
     TicketStatusHistory,
     TicketComment,
     TicketAssignmentHistory,
-    )
+)
 
 from app.schemas import TicketStatus
+
+
+def calculate_sla_due_at(created_at, priority: str):
+    if priority == "HIGH":
+        return created_at + timedelta(hours=4)
+
+    if priority == "MEDIUM":
+        return created_at + timedelta(hours=24)
+
+    if priority == "LOW":
+        return created_at + timedelta(hours=72)
+
+    return created_at + timedelta(hours=24)
+
+
+def calculate_sla_status(ticket):
+    if ticket.ticket_status in ["RESOLVED", "CLOSED"]:
+        return "COMPLETED"
+
+    if ticket.sla_due_at is None:
+        return "UNKNOWN"
+
+    now = datetime.utcnow()
+
+    if now > ticket.sla_due_at:
+        return "BREACHED"
+
+    return "ACTIVE"
+
 
 def save_ticket_history(db: Session, input_text: str, classification):
     """
@@ -31,26 +63,41 @@ def save_ticket_history(db: Session, input_text: str, classification):
         else ticket_status
     )
 
+    category_value = (
+        classification.category.value
+        if hasattr(classification.category, "value")
+        else classification.category
+    )
+
+    priority_value = (
+        classification.priority.value
+        if hasattr(classification.priority, "value")
+        else classification.priority
+    )
+
+    intent_value = (
+        classification.intent.value
+        if hasattr(classification.intent, "value")
+        else classification.intent
+    )
+
+    created_at = datetime.utcnow()
+    sla_due_at = calculate_sla_due_at(
+        created_at=created_at,
+        priority=priority_value,
+    )
+
     ticket = TicketHistory(
         input_text=input_text,
         source_channel=source_channel_value,
 
-        category=(
-            classification.category.value
-            if hasattr(classification.category, "value")
-            else classification.category
-        ),
-        priority=(
-            classification.priority.value
-            if hasattr(classification.priority, "value")
-            else classification.priority
-        ),
-        intent=(
-            classification.intent.value
-            if hasattr(classification.intent, "value")
-            else classification.intent
-        ),
+        category=category_value,
+        priority=priority_value,
+        intent=intent_value,
         ticket_status=ticket_status_value,
+
+        sla_due_at=sla_due_at,
+        sla_status="ACTIVE",
 
         summary=classification.summary,
         suggested_action=classification.suggested_action,
@@ -80,6 +127,7 @@ def save_ticket_history(db: Session, input_text: str, classification):
             if route and hasattr(route.default_action_type, "value")
             else (route.default_action_type if route else None)
         ),
+        created_at=created_at,
     )
 
     db.add(ticket)
@@ -87,6 +135,7 @@ def save_ticket_history(db: Session, input_text: str, classification):
     db.refresh(ticket)
 
     return ticket
+
 
 def get_ticket_history(
     db,
@@ -132,6 +181,7 @@ def get_ticket_history(
 
     return query.offset(offset).limit(limit).all()
 
+
 def count_ticket_history(
     db,
     ticket_status=None,
@@ -155,6 +205,7 @@ def count_ticket_history(
 
     return query.count()
 
+
 def update_ticket_status(db, ticket_id: int, ticket_status: TicketStatus):
     ticket = db.query(TicketHistory).filter(TicketHistory.id == ticket_id).first()
 
@@ -162,13 +213,17 @@ def update_ticket_status(db, ticket_id: int, ticket_status: TicketStatus):
         return None
 
     ticket.ticket_status = ticket_status.value
+    ticket.sla_status = calculate_sla_status(ticket)
+
     db.commit()
     db.refresh(ticket)
 
     return ticket
 
+
 def get_ticket_by_id(db, ticket_id: int):
     return db.query(TicketHistory).filter(TicketHistory.id == ticket_id).first()
+
 
 def save_ticket_status_history(
     db,
@@ -192,6 +247,7 @@ def save_ticket_status_history(
 
     return history
 
+
 def get_ticket_status_history(db, ticket_id: int):
     return (
         db.query(TicketStatusHistory)
@@ -199,6 +255,7 @@ def get_ticket_status_history(db, ticket_id: int):
         .order_by(TicketStatusHistory.changed_at.asc())
         .all()
     )
+
 
 def create_ticket_comment(
     db,
@@ -226,6 +283,7 @@ def get_ticket_comments(db, ticket_id: int):
         .order_by(TicketComment.created_at.asc())
         .all()
     )
+
 
 def assign_ticket(
     db,
@@ -311,6 +369,7 @@ def build_ticket_history_query(
 
     return query
 
+
 def get_dashboard_summary(db):
     total_tickets = db.query(TicketHistory).count()
 
@@ -366,6 +425,7 @@ def get_dashboard_summary(db):
         "rule_based_tickets": rule_based_tickets,
     }
 
+
 def get_dashboard_counts_by_field(db, field_name: str):
     allowed_fields = {
         "ticket_status": TicketHistory.ticket_status,
@@ -406,6 +466,7 @@ def get_dashboard_counts_by_field(db, field_name: str):
         "items": items
     }
 
+
 def get_recent_tickets(db, limit: int = 5):
     safe_limit = max(1, min(limit, 20))
 
@@ -415,6 +476,7 @@ def get_recent_tickets(db, limit: int = 5):
         .limit(safe_limit)
         .all()
     )
+
 
 def get_urgent_tickets(db, limit: int = 5):
     safe_limit = max(1, min(limit, 20))
@@ -427,6 +489,7 @@ def get_urgent_tickets(db, limit: int = 5):
         .limit(safe_limit)
         .all()
     )
+
 
 def get_unassigned_tickets(db, limit: int = 5):
     safe_limit = max(1, min(limit, 20))
@@ -444,6 +507,7 @@ def get_unassigned_tickets(db, limit: int = 5):
         .limit(safe_limit)
         .all()
     )
+
 
 def get_tickets_by_day(db):
     results = (
@@ -469,6 +533,7 @@ def get_tickets_by_day(db):
     return {
         "items": items
     }
+
 
 def create_ticket_assignment_history(
     db,
@@ -501,6 +566,7 @@ def get_ticket_assignment_history(db, ticket_id: int):
         .all()
     )
 
+
 def get_ticket_timeline(db, ticket_id: int):
     ticket = db.query(TicketHistory).filter(TicketHistory.id == ticket_id).first()
 
@@ -528,7 +594,7 @@ def get_ticket_timeline(db, ticket_id: int):
                 "title": f"Status changed: {item.old_status} -> {item.new_status}",
                 "description": item.note,
                 "author": item.changed_by,
-                "created_at": item.created_at,
+                "created_at": item.changed_at,
             }
         )
 
@@ -563,3 +629,14 @@ def get_ticket_timeline(db, ticket_id: int):
     return {
         "items": timeline_items
     }
+
+def get_breached_sla_tickets(db, limit: int = 100):
+    safe_limit = max(1, min(limit, 500))
+
+    return (
+        db.query(TicketHistory)
+        .filter(TicketHistory.sla_status == "BREACHED")
+        .order_by(TicketHistory.sla_due_at.asc())
+        .limit(safe_limit)
+        .all()
+    )
