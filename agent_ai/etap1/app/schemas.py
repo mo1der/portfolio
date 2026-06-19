@@ -83,6 +83,8 @@ class TicketStatus(str, Enum):
 
 class TicketStatusUpdateRequest(BaseModel):
     ticket_status: TicketStatus
+    changed_by: str | None = None
+    note: str | None = None
 
 class TicketAssignRequest(BaseModel):
     assigned_to: str | None = None
@@ -190,6 +192,8 @@ class TicketStatusHistoryResponse(BaseModel):
     new_status: TicketStatus
     changed_by: str
     changed_at: datetime
+    note: str | None = None
+    created_at: datetime
 
     model_config = {
         "from_attributes": True

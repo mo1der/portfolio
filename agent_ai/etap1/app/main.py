@@ -394,7 +394,8 @@ def patch_ticket_status(
             ticket_id=ticket_id,
             old_status=old_status,
             new_status=new_status,
-            changed_by="SYSTEM",
+            changed_by=request.changed_by or "SYSTEM",
+            note=request.note,
         )
 
     return ticket_to_response(updated_ticket)

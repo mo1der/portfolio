@@ -203,7 +203,8 @@ def test_ticket_timeline_contains_status_event():
     ][0]
 
     assert status_event["title"] == "Status changed: NEW -> IN_PROGRESS"
-    assert status_event["author"] == "SYSTEM"
+    assert status_event["author"] == "test_user"
+    assert status_event["description"] == "Rozpoczęcie pracy."
 
 
 def test_ticket_timeline_is_sorted_by_created_at():

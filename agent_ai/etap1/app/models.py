@@ -41,6 +41,8 @@ class TicketStatusHistory(Base):
 
     changed_by = Column(String(100), nullable=False, default="SYSTEM")
     changed_at = Column(DateTime, default=datetime.utcnow)
+    note = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 class TicketComment(Base):
     __tablename__ = "ticket_comments"

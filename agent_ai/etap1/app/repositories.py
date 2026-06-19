@@ -175,21 +175,22 @@ def save_ticket_status_history(
     ticket_id: int,
     old_status: str,
     new_status: str,
-    changed_by: str = "SYSTEM",
+    changed_by: str | None = None,
+    note: str | None = None,
 ):
-    history_entry = TicketStatusHistory(
+    history = TicketStatusHistory(
         ticket_id=ticket_id,
         old_status=old_status,
         new_status=new_status,
         changed_by=changed_by,
+        note=note,
     )
 
-    db.add(history_entry)
+    db.add(history)
     db.commit()
-    db.refresh(history_entry)
+    db.refresh(history)
 
-    return history_entry
-
+    return history
 
 def get_ticket_status_history(db, ticket_id: int):
     return (
@@ -525,9 +526,9 @@ def get_ticket_timeline(db, ticket_id: int):
             {
                 "event_type": "STATUS_CHANGED",
                 "title": f"Status changed: {item.old_status} -> {item.new_status}",
-                "description": None,
+                "description": item.note,
                 "author": item.changed_by,
-                "created_at": ticket.created_at,
+                "created_at": item.created_at,
             }
         )
 
