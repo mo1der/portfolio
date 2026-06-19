@@ -294,3 +294,14 @@ class TicketAssignmentHistoryResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class TicketTimelineItem(BaseModel):
+    event_type: str
+    title: str
+    description: str | None = None
+    author: str | None = None
+    created_at: datetime
+
+
+class TicketTimelineResponse(BaseModel):
+    items: list[TicketTimelineItem]

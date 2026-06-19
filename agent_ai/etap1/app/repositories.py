@@ -499,3 +499,66 @@ def get_ticket_assignment_history(db, ticket_id: int):
         .order_by(TicketAssignmentHistory.created_at.asc())
         .all()
     )
+
+def get_ticket_timeline(db, ticket_id: int):
+    ticket = db.query(TicketHistory).filter(TicketHistory.id == ticket_id).first()
+
+    if ticket is None:
+        return None
+
+    timeline_items = []
+
+    timeline_items.append(
+        {
+            "event_type": "CREATED",
+            "title": "Ticket created",
+            "description": ticket.input_text,
+            "author": ticket.source_channel,
+            "created_at": ticket.created_at,
+        }
+    )
+
+    status_history = get_ticket_status_history(db=db, ticket_id=ticket_id)
+
+    for item in status_history:
+        timeline_items.append(
+            {
+                "event_type": "STATUS_CHANGED",
+                "title": f"Status changed: {item.old_status} -> {item.new_status}",
+                "description": None,
+                "author": item.changed_by,
+                "created_at": ticket.created_at,
+            }
+        )
+
+    assignment_history = get_ticket_assignment_history(db=db, ticket_id=ticket_id)
+
+    for item in assignment_history:
+        timeline_items.append(
+            {
+                "event_type": "ASSIGNED",
+                "title": f"Assigned: {item.old_assigned_to} -> {item.new_assigned_to}",
+                "description": item.note,
+                "author": item.changed_by,
+                "created_at": item.created_at,
+            }
+        )
+
+    comments = get_ticket_comments(db=db, ticket_id=ticket_id)
+
+    for item in comments:
+        timeline_items.append(
+            {
+                "event_type": "COMMENT_ADDED",
+                "title": "Comment added",
+                "description": item.comment_text,
+                "author": item.author,
+                "created_at": item.created_at,
+            }
+        )
+
+    timeline_items.sort(key=lambda item: item["created_at"])
+
+    return {
+        "items": timeline_items
+    }

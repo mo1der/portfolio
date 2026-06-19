@@ -1,9 +1,15 @@
 from fastapi import FastAPI, Depends, Query, HTTPException
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import Response
+from io import StringIO
+from io import BytesIO
+from openpyxl import Workbook
+
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import datetime, timedelta
 import pandas as pd
+import csv
 
 from app.database import Base, engine, get_db
 import app.models
@@ -26,6 +32,7 @@ from app.repositories import (
     get_unassigned_tickets,
     get_tickets_by_day,
     get_ticket_assignment_history,
+    get_ticket_timeline,
 )
 
 from app.ticket_status_rules import is_status_transition_allowed
@@ -53,6 +60,7 @@ from app.schemas import (
     DashboardOverviewResponse,
     DashboardTicketsByDayResponse,
     TicketAssignmentHistoryResponse,
+    TicketTimelineResponse,
 
 )
 from app.classifier import classify_text_rule_based
@@ -445,6 +453,189 @@ def get_tickets(
         "has_previous": offset > 0,
     }
 
+
+@app.get("/tickets/export/csv")
+def export_tickets_csv(
+    status: TicketStatus | None = Query(None, description="Filter by ticket status"),
+    category: Category | None = Query(None, description="Filter by category"),
+    priority: Priority | None = Query(None, description="Filter by priority"),
+    intent: Intent | None = Query(None, description="Filter by intent"),
+    source_channel: SourceChannel | None = Query(None, description="Filter by source channel"),
+    assigned_to: str | None = Query(None, description="Filter by assigned person or team"),
+    search: str | None = Query(None, description="Search text in ticket fields"),
+    sort_by: str = Query("created_at", description="Sort field"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order"),
+    db: Session = Depends(get_db),
+):
+    tickets = get_ticket_history(
+        db=db,
+        ticket_status=status,
+        category=category,
+        priority=priority,
+        intent=intent,
+        source_channel=source_channel,
+        assigned_to=assigned_to,
+        search=search,
+        limit=10000,
+        offset=0,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
+
+    output = StringIO()
+
+    writer = csv.writer(
+        output,
+        delimiter="\t",
+        lineterminator="\r\n",
+    )
+
+    writer.writerow(
+        [
+            "id",
+            "created_at",
+            "source_channel",
+            "category",
+            "priority",
+            "intent",
+            "ticket_status",
+            "assigned_to",
+            "source",
+            "input_text",
+            "summary",
+            "suggested_action",
+            "executed_action_type",
+            "executed_action_status",
+            "route_agent_name",
+            "route_department",
+        ]
+    )
+
+    for ticket in tickets:
+        writer.writerow(
+            [
+                ticket.id,
+                ticket.created_at,
+                ticket.source_channel,
+                ticket.category,
+                ticket.priority,
+                ticket.intent,
+                ticket.ticket_status,
+                ticket.assigned_to,
+                ticket.source,
+                ticket.input_text,
+                ticket.summary,
+                ticket.suggested_action,
+                ticket.executed_action_type,
+                ticket.executed_action_status,
+                ticket.route_agent_name,
+                ticket.route_department,
+            ]
+        )
+
+    file_content = output.getvalue()
+
+    file_bytes = file_content.encode("utf-16")
+
+    headers = {
+        "Content-Disposition": "attachment; filename=tickets_export.csv"
+    }
+
+    return Response(
+        content=file_bytes,
+        media_type="text/csv; charset=utf-16",
+        headers=headers,
+    )
+
+@app.get("/tickets/export/xlsx")
+def export_tickets_xlsx(
+    status: TicketStatus | None = Query(None, description="Filter by ticket status"),
+    category: Category | None = Query(None, description="Filter by category"),
+    priority: Priority | None = Query(None, description="Filter by priority"),
+    intent: Intent | None = Query(None, description="Filter by intent"),
+    source_channel: SourceChannel | None = Query(None, description="Filter by source channel"),
+    assigned_to: str | None = Query(None, description="Filter by assigned person or team"),
+    search: str | None = Query(None, description="Search text in ticket fields"),
+    sort_by: str = Query("created_at", description="Sort field"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order"),
+    db: Session = Depends(get_db),
+):
+    tickets = get_ticket_history(
+        db=db,
+        ticket_status=status,
+        category=category,
+        priority=priority,
+        intent=intent,
+        source_channel=source_channel,
+        assigned_to=assigned_to,
+        search=search,
+        limit=10000,
+        offset=0,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Tickets"
+
+    headers = [
+        "id",
+        "created_at",
+        "source_channel",
+        "category",
+        "priority",
+        "intent",
+        "ticket_status",
+        "assigned_to",
+        "source",
+        "input_text",
+        "summary",
+        "suggested_action",
+        "executed_action_type",
+        "executed_action_status",
+        "route_agent_name",
+        "route_department",
+    ]
+
+    sheet.append(headers)
+
+    for ticket in tickets:
+        sheet.append(
+            [
+                ticket.id,
+                ticket.created_at,
+                ticket.source_channel,
+                ticket.category,
+                ticket.priority,
+                ticket.intent,
+                ticket.ticket_status,
+                ticket.assigned_to,
+                ticket.source,
+                ticket.input_text,
+                ticket.summary,
+                ticket.suggested_action,
+                ticket.executed_action_type,
+                ticket.executed_action_status,
+                ticket.route_agent_name,
+                ticket.route_department,
+            ]
+        )
+
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
+
+    headers_response = {
+        "Content-Disposition": "attachment; filename=tickets_export.xlsx"
+    }
+
+    return Response(
+        content=output.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers=headers_response,
+    )
+
 @app.get(
     "/tickets/{ticket_id}/status-history",
     response_model=list[TicketStatusHistoryResponse],
@@ -462,6 +653,25 @@ def get_status_history(
         )
 
     return get_ticket_status_history(db=db, ticket_id=ticket_id)
+
+@app.get(
+    "/tickets/{ticket_id}/timeline",
+    response_model=TicketTimelineResponse,
+)
+def get_ticket_timeline_endpoint(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+):
+    timeline = get_ticket_timeline(db=db, ticket_id=ticket_id)
+
+    if timeline is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Ticket not found",
+        )
+
+    return timeline
+
 
 @app.get("/tickets/{ticket_id}", response_model=TicketHistoryResponse)
 def get_ticket(
