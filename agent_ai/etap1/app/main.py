@@ -37,6 +37,7 @@ from app.repositories import (
     get_breached_sla_tickets,
     get_sla_tickets,
     recalculate_sla_statuses,
+    get_dashboard_sla_counts,
 )
 
 from app.ticket_status_rules import is_status_transition_allowed
@@ -66,6 +67,7 @@ from app.schemas import (
     TicketAssignmentHistoryResponse,
     TicketTimelineResponse,
     SlaRecalculateResponse,
+    DashboardSlaCountsResponse,
 
 )
 from app.classifier import classify_text_rule_based
@@ -827,6 +829,12 @@ def get_dashboard_status_counts(db: Session = Depends(get_db)):
 @app.get("/dashboard/category-counts", response_model=DashboardCountsResponse)
 def get_dashboard_category_counts(db: Session = Depends(get_db)):
     return get_dashboard_counts_by_field(db, "category")
+
+@app.get("/dashboard/sla-counts", response_model=DashboardSlaCountsResponse)
+def get_dashboard_sla_counts_endpoint(
+    db: Session = Depends(get_db),
+):
+    return get_dashboard_sla_counts(db=db)
 
 
 @app.get("/dashboard/priority-counts", response_model=DashboardCountsResponse)

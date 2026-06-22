@@ -469,6 +469,48 @@ def get_dashboard_summary(db):
         "unknown_sla_tickets": unknown_sla_tickets,
     }
 
+def get_dashboard_sla_counts(db):
+    breached_count = db.query(TicketHistory).filter(
+        TicketHistory.sla_status == "BREACHED"
+    ).count()
+
+    active_count = db.query(TicketHistory).filter(
+        TicketHistory.sla_status == "ACTIVE"
+    ).count()
+
+    completed_count = db.query(TicketHistory).filter(
+        TicketHistory.sla_status == "COMPLETED"
+    ).count()
+
+    unknown_count = db.query(TicketHistory).filter(
+        or_(
+            TicketHistory.sla_status.is_(None),
+            TicketHistory.sla_status == "",
+            TicketHistory.sla_status == "UNKNOWN",
+        )
+    ).count()
+
+    return {
+        "items": [
+            {
+                "name": "BREACHED",
+                "count": breached_count,
+            },
+            {
+                "name": "ACTIVE",
+                "count": active_count,
+            },
+            {
+                "name": "COMPLETED",
+                "count": completed_count,
+            },
+            {
+                "name": "UNKNOWN",
+                "count": unknown_count,
+            },
+        ]
+    }
+
 
 def get_dashboard_counts_by_field(db, field_name: str):
     allowed_fields = {

@@ -345,3 +345,10 @@ def calculate_sla_status(ticket):
 class SlaRecalculateResponse(BaseModel):
     checked_tickets: int
     updated_tickets: int
+
+class DashboardSlaCountItem(BaseModel):
+    name: str
+    count: int
+
+class DashboardSlaCountsResponse(BaseModel):
+    items: list[DashboardSlaCountItem]
