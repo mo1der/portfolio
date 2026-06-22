@@ -156,7 +156,6 @@ def save_ticket_history(db: Session, input_text: str, classification):
 
     return ticket
 
-
 def get_ticket_history(
     db,
     ticket_status=None,
@@ -165,6 +164,7 @@ def get_ticket_history(
     intent=None,
     source_channel=None,
     assigned_to=None,
+    sla_status=None,
     search=None,
     limit: int = 100,
     offset: int = 0,
@@ -179,6 +179,7 @@ def get_ticket_history(
         intent=intent,
         source_channel=source_channel,
         assigned_to=assigned_to,
+        sla_status=sla_status,
         search=search,
     )
 
@@ -190,6 +191,8 @@ def get_ticket_history(
         "ticket_status": TicketHistory.ticket_status,
         "source_channel": TicketHistory.source_channel,
         "assigned_to": TicketHistory.assigned_to,
+        "sla_due_at": TicketHistory.sla_due_at,
+        "sla_status": TicketHistory.sla_status,
     }
 
     sort_column = allowed_sort_fields.get(sort_by, TicketHistory.created_at)
@@ -201,7 +204,6 @@ def get_ticket_history(
 
     return query.offset(offset).limit(limit).all()
 
-
 def count_ticket_history(
     db,
     ticket_status=None,
@@ -210,6 +212,7 @@ def count_ticket_history(
     intent=None,
     source_channel=None,
     assigned_to=None,
+    sla_status=None,
     search=None,
 ):
     query = build_ticket_history_query(
@@ -220,6 +223,7 @@ def count_ticket_history(
         intent=intent,
         source_channel=source_channel,
         assigned_to=assigned_to,
+        sla_status=sla_status,
         search=search,
     )
 
@@ -336,7 +340,6 @@ def assign_ticket(
 
     return ticket
 
-
 def build_ticket_history_query(
     db,
     ticket_status=None,
@@ -345,6 +348,7 @@ def build_ticket_history_query(
     intent=None,
     source_channel=None,
     assigned_to=None,
+    sla_status=None,
     search=None,
 ):
     query = db.query(TicketHistory)
@@ -374,6 +378,20 @@ def build_ticket_history_query(
     if assigned_to is not None:
         query = query.filter(TicketHistory.assigned_to == assigned_to)
 
+    if sla_status is not None:
+        sla_status_value = sla_status.value if hasattr(sla_status, "value") else sla_status
+
+        if sla_status_value == "UNKNOWN":
+            query = query.filter(
+                or_(
+                    TicketHistory.sla_status.is_(None),
+                    TicketHistory.sla_status == "",
+                    TicketHistory.sla_status == "UNKNOWN",
+                )
+            )
+        else:
+            query = query.filter(TicketHistory.sla_status == sla_status_value)
+
     if search is not None and search.strip():
         search_pattern = f"%{search.strip()}%"
 
@@ -388,7 +406,6 @@ def build_ticket_history_query(
         )
 
     return query
-
 
 def get_dashboard_summary(db):
     total_tickets = db.query(TicketHistory).count()

@@ -421,12 +421,17 @@ def get_tickets(
     intent: Intent | None = Query(None, description="Filter by intent"),
     source_channel: SourceChannel | None = Query(None, description="Filter by source channel"),
     assigned_to: str | None = Query(None, description="Filter by assigned person or team"),
+    sla_status: Literal["BREACHED", "ACTIVE", "COMPLETED", "UNKNOWN"] | None = Query(
+        None,
+        description="SLA status filter: BREACHED, ACTIVE, COMPLETED, UNKNOWN",
+    ),
     search: str | None = Query(None, description="Search text in ticket fields"),
     limit: int = Query(100, ge=1, le=500, description="Maximum number of tickets to return"),
     offset: int = Query(0, ge=0, description="Number of tickets to skip"),
     sort_by: str = Query("created_at", description="Sort field"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order"),
     db: Session = Depends(get_db),
+
 ):
     tickets = get_ticket_history(
         db=db,
@@ -436,6 +441,7 @@ def get_tickets(
         intent=intent,
         source_channel=source_channel,
         assigned_to=assigned_to,
+        sla_status=sla_status,
         search=search,
         limit=limit,
         offset=offset,
@@ -451,6 +457,7 @@ def get_tickets(
         intent=intent,
         source_channel=source_channel,
         assigned_to=assigned_to,
+        sla_status=sla_status,
         search=search,
     )
 
