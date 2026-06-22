@@ -664,3 +664,32 @@ def get_breached_sla_tickets(db, limit: int = 100):
         .limit(safe_limit)
         .all()
     )
+
+def get_sla_tickets(db, status: str | None = None, limit: int = 100):
+    safe_limit = max(1, min(limit, 500))
+
+    query = db.query(TicketHistory)
+
+    if status is not None:
+        if status == "UNKNOWN":
+            query = query.filter(
+                or_(
+                    TicketHistory.sla_status.is_(None),
+                    TicketHistory.sla_status == "",
+                    TicketHistory.sla_status == "UNKNOWN",
+                )
+            )
+        else:
+            query = query.filter(TicketHistory.sla_status == status)
+    else:
+        query = query.filter(
+            TicketHistory.sla_status.isnot(None),
+            TicketHistory.sla_status != "",
+        )
+
+    return (
+        query
+        .order_by(TicketHistory.sla_due_at.asc())
+        .limit(safe_limit)
+        .all()
+    )

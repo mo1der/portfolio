@@ -3,6 +3,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response
 from io import StringIO
 from io import BytesIO
+from typing import Literal, Optional
 from openpyxl import Workbook
 
 from sqlalchemy.orm import Session
@@ -34,6 +35,7 @@ from app.repositories import (
     get_ticket_assignment_history,
     get_ticket_timeline,
     get_breached_sla_tickets,
+    get_sla_tickets,
 )
 
 from app.ticket_status_rules import is_status_transition_allowed
@@ -683,6 +685,23 @@ def get_breached_sla_tickets_endpoint(
 ):
     tickets = get_breached_sla_tickets(
         db=db,
+        limit=limit,
+    )
+
+    return [ticket_to_response(ticket) for ticket in tickets]
+
+@app.get("/tickets/sla", response_model=list[TicketHistoryResponse])
+def get_sla_tickets_endpoint(
+    status: Literal["BREACHED", "ACTIVE", "COMPLETED", "UNKNOWN"] | None = Query(
+        None,
+        description="SLA status filter: BREACHED, ACTIVE, COMPLETED, UNKNOWN",
+    ),
+    limit: int = Query(100, ge=1, le=500),
+    db: Session = Depends(get_db),
+):
+    tickets = get_sla_tickets(
+        db=db,
+        status=status,
         limit=limit,
     )
 
