@@ -36,6 +36,7 @@ from app.repositories import (
     get_ticket_timeline,
     get_breached_sla_tickets,
     get_sla_tickets,
+    recalculate_sla_statuses,
 )
 
 from app.ticket_status_rules import is_status_transition_allowed
@@ -64,6 +65,7 @@ from app.schemas import (
     DashboardTicketsByDayResponse,
     TicketAssignmentHistoryResponse,
     TicketTimelineResponse,
+    SlaRecalculateResponse,
 
 )
 from app.classifier import classify_text_rule_based
@@ -706,6 +708,12 @@ def get_sla_tickets_endpoint(
     )
 
     return [ticket_to_response(ticket) for ticket in tickets]
+
+@app.post("/tickets/sla/recalculate", response_model=SlaRecalculateResponse)
+def recalculate_sla_statuses_endpoint(
+    db: Session = Depends(get_db),
+):
+    return recalculate_sla_statuses(db=db)
 
 @app.get("/tickets/{ticket_id}", response_model=TicketHistoryResponse)
 def get_ticket(

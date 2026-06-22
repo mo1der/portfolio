@@ -341,3 +341,7 @@ def calculate_sla_status(ticket):
         return "BREACHED"
 
     return "ACTIVE"
+
+class SlaRecalculateResponse(BaseModel):
+    checked_tickets: int
+    updated_tickets: int

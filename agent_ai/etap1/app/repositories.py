@@ -40,6 +40,26 @@ def calculate_sla_status(ticket):
 
     return "ACTIVE"
 
+def recalculate_sla_statuses(db):
+    tickets = db.query(TicketHistory).all()
+
+    updated_count = 0
+
+    for ticket in tickets:
+        old_sla_status = ticket.sla_status
+        new_sla_status = calculate_sla_status(ticket)
+
+        if old_sla_status != new_sla_status:
+            ticket.sla_status = new_sla_status
+            updated_count += 1
+
+    db.commit()
+
+    return {
+        "checked_tickets": len(tickets),
+        "updated_tickets": updated_count,
+    }
+
 
 def save_ticket_history(db: Session, input_text: str, classification):
     """
