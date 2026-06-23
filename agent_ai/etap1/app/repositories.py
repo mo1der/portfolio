@@ -11,7 +11,7 @@ from app.models import (
 )
 
 from app.schemas import TicketStatus
-
+from app.suggested_reply_service import generate_suggested_reply_with_source
 
 def calculate_sla_due_at(created_at, priority: str):
     if priority == "HIGH":
@@ -194,11 +194,15 @@ def save_ticket_history(db: Session, input_text: str, classification):
         priority=priority_value,
     )
 
-    suggested_reply = generate_suggested_reply(
+    suggested_reply_result = generate_suggested_reply_with_source(
+        input_text=input_text,
         category=category_value,
         priority=priority_value,
         assigned_to=assigned_to,
     )
+
+    suggested_reply = suggested_reply_result["suggested_reply"]
+    suggested_reply_source = suggested_reply_result["suggested_reply_source"]
 
     ticket = TicketHistory(
         input_text=input_text,
@@ -216,6 +220,7 @@ def save_ticket_history(db: Session, input_text: str, classification):
         summary=classification.summary,
         suggested_action=classification.suggested_action,
         suggested_reply=suggested_reply,
+        suggested_reply_source=suggested_reply_source,
         source=classification.source,
 
         executed_action_type=(
