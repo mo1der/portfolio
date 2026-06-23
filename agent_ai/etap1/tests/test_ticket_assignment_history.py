@@ -86,7 +86,7 @@ def test_assignment_history_created_after_assign():
     item = history[0]
 
     assert item["ticket_id"] == ticket_id
-    assert item["old_assigned_to"] is None
+    assert item["old_assigned_to"] == "finance_priority_team"
     assert item["new_assigned_to"] == "finance_team"
     assert item["changed_by"] == "test_user"
     assert item["note"] == "Przypisanie testowe do działu finansów."
@@ -145,7 +145,7 @@ def test_assignment_history_tracks_reassignment():
 
     assert len(history) == 2
 
-    assert history[0]["old_assigned_to"] is None
+    assert history[0]["old_assigned_to"] == "finance_priority_team"
     assert history[0]["new_assigned_to"] == "finance_team"
 
     assert history[1]["old_assigned_to"] == "finance_team"

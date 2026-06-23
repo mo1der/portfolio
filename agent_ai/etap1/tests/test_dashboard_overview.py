@@ -65,7 +65,7 @@ def test_dashboard_overview_after_process():
     assert data["summary"]["total_tickets"] == 1
     assert data["summary"]["new_tickets"] == 1
     assert data["summary"]["high_priority_tickets"] == 1
-    assert data["summary"]["unassigned_tickets"] == 1
+    assert data["summary"]["unassigned_tickets"] == 0
     assert data["summary"]["rule_based_tickets"] == 1
 
     assert {
@@ -89,13 +89,13 @@ def test_dashboard_overview_after_process():
     } in data["source_counts"]["items"]
 
     assert {
-        "name": "UNASSIGNED",
-        "count": 1,
-    } in data["assigned_counts"]["items"]
+               "name": "finance_priority_team",
+               "count": 1,
+           } in data["assigned_counts"]["items"]
 
     assert len(data["recent_tickets"]["items"]) == 1
     assert len(data["urgent_tickets"]["items"]) == 1
-    assert len(data["unassigned_tickets"]["items"]) == 1
+    assert len(data["unassigned_tickets"]["items"]) == 0
 
 
 def test_dashboard_overview_limit():
@@ -132,7 +132,7 @@ def test_dashboard_overview_limit():
     assert data["summary"]["total_tickets"] == 3
     assert len(data["recent_tickets"]["items"]) == 2
     assert len(data["urgent_tickets"]["items"]) == 2
-    assert len(data["unassigned_tickets"]["items"]) == 2
+    assert len(data["unassigned_tickets"]["items"]) == 0
 
 def create_test_ticket(
     input_text: str,

@@ -40,6 +40,30 @@ def calculate_sla_status(ticket):
 
     return "ACTIVE"
 
+def determine_default_assignee(category: str, priority: str):
+    if category == "FINANCE":
+        if priority == "HIGH":
+            return "finance_priority_team"
+
+        return "finance_team"
+
+    if category == "IT_SUPPORT":
+        if priority == "HIGH":
+            return "it_priority_team"
+
+        return "it_support_team"
+
+    if category == "HR":
+        if priority == "HIGH":
+            return "hr_priority_team"
+
+        return "hr_team"
+
+    if priority == "HIGH":
+        return "general_priority_team"
+
+    return "general_team"
+
 def recalculate_sla_statuses(db):
     tickets = db.query(TicketHistory).all()
 
@@ -107,6 +131,11 @@ def save_ticket_history(db: Session, input_text: str, classification):
         priority=priority_value,
     )
 
+    assigned_to = determine_default_assignee(
+        category=category_value,
+        priority=priority_value,
+    )
+
     ticket = TicketHistory(
         input_text=input_text,
         source_channel=source_channel_value,
@@ -115,6 +144,7 @@ def save_ticket_history(db: Session, input_text: str, classification):
         priority=priority_value,
         intent=intent_value,
         ticket_status=ticket_status_value,
+        assigned_to=assigned_to,
 
         sla_due_at=sla_due_at,
         sla_status="ACTIVE",

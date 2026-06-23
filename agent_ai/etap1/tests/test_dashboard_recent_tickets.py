@@ -52,7 +52,7 @@ def test_dashboard_recent_tickets_after_process():
     assert ticket["priority"] == "HIGH"
     assert ticket["ticket_status"] == "NEW"
     assert ticket["source"] == "RULE_BASED"
-    assert ticket["assigned_to"] is None
+    assert ticket["assigned_to"] == "finance_priority_team"
     assert "id" in ticket
     assert "created_at" in ticket
 

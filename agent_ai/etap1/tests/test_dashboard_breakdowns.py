@@ -128,7 +128,7 @@ def test_dashboard_source_counts_after_process():
     } in data["items"]
 
 
-def test_dashboard_assigned_counts_for_unassigned_ticket():
+def test_dashboard_assigned_counts_for_auto_assigned_ticket():
     client.post(
         "/process",
         json={
@@ -144,6 +144,6 @@ def test_dashboard_assigned_counts_for_unassigned_ticket():
     data = response.json()
 
     assert {
-        "name": "UNASSIGNED",
-        "count": 1,
-    } in data["items"]
+               "name": "finance_priority_team",
+               "count": 1,
+           } in data["items"]

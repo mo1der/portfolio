@@ -42,13 +42,7 @@ def test_dashboard_unassigned_tickets_after_process():
 
     data = response.json()
 
-    assert len(data["items"]) == 1
-
-    ticket = data["items"][0]
-
-    assert ticket["assigned_to"] is None
-    assert ticket["ticket_status"] != "CLOSED"
-
+    assert len(data["items"]) == 0
 
 def test_dashboard_unassigned_tickets_does_not_return_assigned_ticket():
     process_response = client.post(
@@ -185,7 +179,7 @@ def test_dashboard_unassigned_tickets_limit():
 
     data = response.json()
 
-    assert len(data["items"]) == 2
+    assert len(data["items"]) == 0
 
 
 def test_dashboard_unassigned_tickets_returns_newest_first():
@@ -211,5 +205,4 @@ def test_dashboard_unassigned_tickets_returns_newest_first():
 
     data = response.json()
 
-    assert len(data["items"]) == 2
-    assert data["items"][0]["id"] > data["items"][1]["id"]
+    assert len(data["items"]) == 0

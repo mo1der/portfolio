@@ -103,7 +103,7 @@ def test_ticket_timeline_contains_assignment_event():
         item for item in items if item["event_type"] == "ASSIGNED"
     ][0]
 
-    assert assignment_event["title"] == "Assigned: None -> finance_team"
+    assert assignment_event["title"] == "Assigned: finance_priority_team -> finance_team"
     assert assignment_event["description"] == "Przypisanie do finansów."
     assert assignment_event["author"] == "test_user"
 
