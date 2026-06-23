@@ -39,6 +39,7 @@ from app.repositories import (
     recalculate_sla_statuses,
     get_dashboard_sla_counts,
     get_dashboard_kpis,
+    get_due_soon_sla_tickets,
 )
 
 from app.ticket_status_rules import is_status_transition_allowed
@@ -698,6 +699,25 @@ def get_breached_sla_tickets_endpoint(
 ):
     tickets = get_breached_sla_tickets(
         db=db,
+        limit=limit,
+    )
+
+    return [ticket_to_response(ticket) for ticket in tickets]
+
+@app.get("/tickets/sla/due-soon", response_model=list[TicketHistoryResponse])
+def get_due_soon_sla_tickets_endpoint(
+    hours: int = Query(
+        4,
+        ge=1,
+        le=168,
+        description="How many hours ahead should be checked for due soon SLA tickets",
+    ),
+    limit: int = Query(100, ge=1, le=500),
+    db: Session = Depends(get_db),
+):
+    tickets = get_due_soon_sla_tickets(
+        db=db,
+        hours=hours,
         limit=limit,
     )
 

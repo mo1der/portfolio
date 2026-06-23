@@ -885,3 +885,21 @@ def get_sla_tickets(db, status: str | None = None, limit: int = 100):
         .limit(safe_limit)
         .all()
     )
+
+def get_due_soon_sla_tickets(db, hours: int = 4, limit: int = 100):
+    safe_hours = max(1, min(hours, 168))
+    safe_limit = max(1, min(limit, 500))
+
+    now = datetime.utcnow()
+    due_until = now + timedelta(hours=safe_hours)
+
+    return (
+        db.query(TicketHistory)
+        .filter(TicketHistory.sla_status == "ACTIVE")
+        .filter(TicketHistory.sla_due_at.isnot(None))
+        .filter(TicketHistory.sla_due_at >= now)
+        .filter(TicketHistory.sla_due_at <= due_until)
+        .order_by(TicketHistory.sla_due_at.asc())
+        .limit(safe_limit)
+        .all()
+    )
