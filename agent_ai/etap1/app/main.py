@@ -71,6 +71,7 @@ from app.schemas import (
     SlaRecalculateResponse,
     DashboardSlaCountsResponse,
     DashboardKpiResponse,
+    ComplexProcessResponse,
 
 )
 from app.classifier import classify_text_rule_based
@@ -80,6 +81,7 @@ from app.error_handlers import app_error_handler, generic_error_handler, validat
 from app.exceptions import AppError
 from app.middleware import RequestLoggingMiddleware
 from app.ai_usage_limiter import ai_usage_limiter
+from app.complex_message_splitter import split_complex_message
 
 from scripts.sync_sqlite_to_mysql import sync
 
@@ -300,6 +302,79 @@ def process(request: ClassificationRequest, db: Session = Depends(get_db)):
 
     save_ticket_history(db=db, input_text=text, classification=response)
     return response
+
+@app.post("/process/complex", response_model=ComplexProcessResponse)
+def process_complex_message(
+    request: ClassificationRequest,
+    db: Session = Depends(get_db),
+):
+    parts = split_complex_message(request.text)
+
+    created_tickets = []
+
+    for part in parts:
+        classification = classify_text(part)
+
+        category = (
+            classification["category"].value
+            if hasattr(classification["category"], "value")
+            else classification["category"]
+        )
+
+        priority = (
+            classification["priority"].value
+            if hasattr(classification["priority"], "value")
+            else classification["priority"]
+        )
+
+        intent = classify_intent(part)
+
+        route = route_message(category, part)
+
+        action_type = route_action(category, intent)
+        executed_action = execute_action(action_type)
+
+        response = ProcessResponse(
+            category=category,
+            priority=priority,
+            intent=intent,
+            summary=classification["summary"],
+            suggested_action=classification["suggested_action"],
+            source=classification["source"],
+            source_channel=request.source_channel,
+            route=route,
+            executed_action=executed_action,
+        )
+
+        ticket = save_ticket_history(
+            db=db,
+            input_text=part,
+            classification=response,
+        )
+
+        created_tickets.append(
+            {
+                "id": ticket.id,
+                "category": ticket.category,
+                "priority": ticket.priority,
+                "intent": ticket.intent,
+                "ticket_status": ticket.ticket_status,
+                "assigned_to": ticket.assigned_to,
+                "summary": ticket.summary,
+                "suggested_action": ticket.suggested_action,
+                "suggested_reply": ticket.suggested_reply,
+                "suggested_reply_source": ticket.suggested_reply_source,
+                "possible_duplicate": ticket.possible_duplicate,
+                "duplicate_ticket_id": ticket.duplicate_ticket_id,
+                "duplicate_score": ticket.duplicate_score,
+            }
+        )
+
+    return {
+        "is_complex": len(parts) > 1,
+        "original_text": request.text,
+        "created_tickets": created_tickets,
+    }
 
 # -----------------------------
 
