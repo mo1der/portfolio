@@ -558,6 +558,89 @@ def get_dashboard_sla_counts(db):
         ]
     }
 
+def calculate_percentage(part: int, total: int):
+    if total == 0:
+        return 0.0
+
+    return round((part / total) * 100, 2)
+
+
+def get_dashboard_kpis(db):
+    total_tickets = db.query(TicketHistory).count()
+
+    open_tickets = db.query(TicketHistory).filter(
+        TicketHistory.ticket_status.in_(
+            [
+                "NEW",
+                "IN_PROGRESS",
+                "WAITING_FOR_USER",
+            ]
+        )
+    ).count()
+
+    closed_or_resolved_tickets = db.query(TicketHistory).filter(
+        TicketHistory.ticket_status.in_(
+            [
+                "RESOLVED",
+                "CLOSED",
+            ]
+        )
+    ).count()
+
+    high_priority_tickets = db.query(TicketHistory).filter(
+        TicketHistory.priority == "HIGH"
+    ).count()
+
+    breached_sla_tickets = db.query(TicketHistory).filter(
+        TicketHistory.sla_status == "BREACHED"
+    ).count()
+
+    active_sla_tickets = db.query(TicketHistory).filter(
+        TicketHistory.sla_status == "ACTIVE"
+    ).count()
+
+    unassigned_tickets = db.query(TicketHistory).filter(
+        or_(
+            TicketHistory.assigned_to.is_(None),
+            TicketHistory.assigned_to == "",
+        )
+    ).count()
+
+    assigned_tickets = db.query(TicketHistory).filter(
+        TicketHistory.assigned_to.isnot(None),
+        TicketHistory.assigned_to != "",
+    ).count()
+
+    ai_classified_tickets = db.query(TicketHistory).filter(
+        TicketHistory.source == "AI"
+    ).count()
+
+    rule_based_tickets = db.query(TicketHistory).filter(
+        TicketHistory.source == "RULE_BASED"
+    ).count()
+
+    return {
+        "total_tickets": total_tickets,
+        "open_tickets": open_tickets,
+        "closed_or_resolved_tickets": closed_or_resolved_tickets,
+        "high_priority_tickets": high_priority_tickets,
+        "breached_sla_tickets": breached_sla_tickets,
+        "active_sla_tickets": active_sla_tickets,
+        "unassigned_tickets": unassigned_tickets,
+        "assigned_tickets": assigned_tickets,
+        "ai_classification_rate": calculate_percentage(
+            ai_classified_tickets,
+            total_tickets,
+        ),
+        "rule_based_classification_rate": calculate_percentage(
+            rule_based_tickets,
+            total_tickets,
+        ),
+        "auto_assignment_rate": calculate_percentage(
+            assigned_tickets,
+            total_tickets,
+        ),
+    }
 
 def get_dashboard_counts_by_field(db, field_name: str):
     allowed_fields = {

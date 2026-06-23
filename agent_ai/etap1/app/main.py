@@ -38,6 +38,7 @@ from app.repositories import (
     get_sla_tickets,
     recalculate_sla_statuses,
     get_dashboard_sla_counts,
+    get_dashboard_kpis,
 )
 
 from app.ticket_status_rules import is_status_transition_allowed
@@ -68,6 +69,7 @@ from app.schemas import (
     TicketTimelineResponse,
     SlaRecalculateResponse,
     DashboardSlaCountsResponse,
+    DashboardKpiResponse,
 
 )
 from app.classifier import classify_text_rule_based
@@ -769,6 +771,12 @@ def ticket_stats(days: int = Query(30, description="Ilość dni do wstecznej ana
 @app.get("/dashboard/summary", response_model=DashboardSummaryResponse)
 def get_dashboard_summary_endpoint(db: Session = Depends(get_db)):
     return get_dashboard_summary(db)
+
+@app.get("/dashboard/kpis", response_model=DashboardKpiResponse)
+def get_dashboard_kpis_endpoint(
+    db: Session = Depends(get_db),
+):
+    return get_dashboard_kpis(db=db)
 
 @app.get("/dashboard/overview", response_model=DashboardOverviewResponse)
 def get_dashboard_overview(

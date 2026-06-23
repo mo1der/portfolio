@@ -352,3 +352,16 @@ class DashboardSlaCountItem(BaseModel):
 
 class DashboardSlaCountsResponse(BaseModel):
     items: list[DashboardSlaCountItem]
+
+class DashboardKpiResponse(BaseModel):
+    total_tickets: int
+    open_tickets: int
+    closed_or_resolved_tickets: int
+    high_priority_tickets: int
+    breached_sla_tickets: int
+    active_sla_tickets: int
+    unassigned_tickets: int
+    assigned_tickets: int
+    ai_classification_rate: float
+    rule_based_classification_rate: float
+    auto_assignment_rate: float
