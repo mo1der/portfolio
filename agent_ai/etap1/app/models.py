@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, DateTime, Integer, String, Text
+from sqlalchemy import Column, DateTime, Integer, String, Text, Boolean, Float
 from app.database import Base
 
 class TicketHistory(Base):
@@ -23,6 +23,9 @@ class TicketHistory(Base):
     suggested_reply_source = Column(String(50), nullable=True)
 
     source = Column(String(50), nullable=True)
+    possible_duplicate = Column(Boolean, nullable=False, default=False)
+    duplicate_ticket_id = Column(Integer, nullable=True)
+    duplicate_score = Column(Float, nullable=True)
 
     executed_action_type = Column(String(100), nullable=True)
     executed_action_status = Column(String(50), nullable=True)

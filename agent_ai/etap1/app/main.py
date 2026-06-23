@@ -318,6 +318,9 @@ def ticket_to_response(ticket):
         "suggested_action": ticket.suggested_action,
         "suggested_reply": ticket.suggested_reply,
         "suggested_reply_source": ticket.suggested_reply_source,
+        "possible_duplicate": ticket.possible_duplicate,
+        "duplicate_ticket_id": ticket.duplicate_ticket_id,
+        "duplicate_score": ticket.duplicate_score,
         "source": ticket.source,
 
         "sla_due_at": ticket.sla_due_at,

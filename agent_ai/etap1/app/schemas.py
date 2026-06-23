@@ -162,6 +162,9 @@ class TicketHistoryResponse(BaseModel):
     suggested_action: str
     suggested_reply: str | None = None
     suggested_reply_source: str | None = None
+    possible_duplicate: bool = False
+    duplicate_ticket_id: int | None = None
+    duplicate_score: float | None = None
     source: str | None = None
     sla_due_at: datetime | None = None
     sla_status: str | None = None

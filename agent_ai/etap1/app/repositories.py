@@ -12,6 +12,7 @@ from app.models import (
 
 from app.schemas import TicketStatus
 from app.suggested_reply_service import generate_suggested_reply_with_source
+from app.duplicate_detector import find_possible_duplicate_ticket
 
 def calculate_sla_due_at(created_at, priority: str):
     if priority == "HIGH":
@@ -204,6 +205,16 @@ def save_ticket_history(db: Session, input_text: str, classification):
     suggested_reply = suggested_reply_result["suggested_reply"]
     suggested_reply_source = suggested_reply_result["suggested_reply_source"]
 
+    duplicate_result = find_possible_duplicate_ticket(
+        db=db,
+        input_text=input_text,
+        category=category_value,
+    )
+
+    possible_duplicate = duplicate_result["possible_duplicate"]
+    duplicate_ticket_id = duplicate_result["duplicate_ticket_id"]
+    duplicate_score = duplicate_result["duplicate_score"]
+
     ticket = TicketHistory(
         input_text=input_text,
         source_channel=source_channel_value,
@@ -221,6 +232,9 @@ def save_ticket_history(db: Session, input_text: str, classification):
         suggested_action=classification.suggested_action,
         suggested_reply=suggested_reply,
         suggested_reply_source=suggested_reply_source,
+        possible_duplicate=possible_duplicate,
+        duplicate_ticket_id=duplicate_ticket_id,
+        duplicate_score=duplicate_score,
         source=classification.source,
 
         executed_action_type=(
