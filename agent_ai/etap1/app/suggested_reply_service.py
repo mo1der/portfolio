@@ -1,4 +1,6 @@
-import os
+from openai import OpenAI
+
+from app.core.settings import settings
 
 
 def generate_rule_based_suggested_reply(
@@ -66,14 +68,71 @@ def generate_ai_suggested_reply(
     priority: str,
     assigned_to: str | None,
 ):
-    ai_enabled = os.getenv("AI_ENABLED", "false").lower() == "true"
-
-    if not ai_enabled:
+    if not settings.ai_enabled:
         return None
 
-    # Tu w kolejnym kroku podepniemy realne OpenAI.
-    # Na razie funkcja jest przygotowana pod AI i daje fallback.
-    return None
+    if not settings.openai_api_key:
+        return None
+
+    try:
+        client = OpenAI(
+            api_key=settings.openai_api_key,
+            timeout=10,
+        )
+
+        team_text = assigned_to or "odpowiedni zespół"
+
+        prompt = f"""
+Napisz krótką, profesjonalną propozycję odpowiedzi do klienta po polsku.
+
+Zasady:
+- maksymalnie 3 zdania,
+- ton spokojny i profesjonalny,
+- nie obiecuj rozwiązania problemu,
+- nie podawaj niepewnych informacji,
+- uwzględnij kategorię, priorytet i zespół,
+- odpowiedź ma być gotowa do wysłania przez konsultanta.
+
+Dane zgłoszenia:
+Treść klienta: {input_text}
+Kategoria: {category}
+Priorytet: {priority}
+Zespół: {team_text}
+""".strip()
+
+        response = client.chat.completions.create(
+            model=settings.openai_model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Jesteś asystentem działu obsługi klienta. "
+                        "Tworzysz krótkie, bezpieczne i profesjonalne odpowiedzi."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": prompt,
+                },
+            ],
+            temperature=0.2,
+            max_tokens=150,
+        )
+
+        reply = response.choices[0].message.content
+
+        if reply is None:
+            return None
+
+        reply = reply.strip()
+
+        if not reply:
+            return None
+
+        return reply
+
+    except Exception:
+        return None
 
 
 def generate_suggested_reply_with_source(
