@@ -18,6 +18,8 @@ class TicketHistory(Base):
     assigned_to = Column(String(100), nullable=True)
     summary = Column(Text, nullable=False)
     suggested_action = Column(Text, nullable=False)
+    suggested_reply = Column(Text, nullable=True)
+
     source = Column(String(50), nullable=True)
 
     executed_action_type = Column(String(100), nullable=True)

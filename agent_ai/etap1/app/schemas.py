@@ -160,6 +160,7 @@ class TicketHistoryResponse(BaseModel):
 
     summary: str
     suggested_action: str
+    suggested_reply: str | None = None
     source: str | None = None
     sla_due_at: datetime | None = None
     sla_status: str | None = None

@@ -316,6 +316,7 @@ def ticket_to_response(ticket):
         "assigned_to": ticket.assigned_to,
         "summary": ticket.summary,
         "suggested_action": ticket.suggested_action,
+        "suggested_reply": ticket.suggested_reply,
         "source": ticket.source,
 
         "sla_due_at": ticket.sla_due_at,

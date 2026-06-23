@@ -64,6 +64,64 @@ def determine_default_assignee(category: str, priority: str):
 
     return "general_team"
 
+def generate_suggested_reply(
+    category: str,
+    priority: str,
+    assigned_to: str | None,
+):
+    team_text = assigned_to or "odpowiedni zespół"
+
+    if category == "FINANCE":
+        if priority == "HIGH":
+            return (
+                "Dzień dobry, dziękujemy za zgłoszenie. "
+                "Sprawa dotycząca finansów została oznaczona jako pilna "
+                f"i przekazana do zespołu {team_text}. "
+                "Zajmiemy się nią priorytetowo."
+            )
+
+        return (
+            "Dzień dobry, dziękujemy za zgłoszenie. "
+            f"Sprawa dotycząca finansów została przekazana do zespołu {team_text}. "
+            "Po weryfikacji wrócimy z odpowiedzią."
+        )
+
+    if category == "IT_SUPPORT":
+        if priority == "HIGH":
+            return (
+                "Dzień dobry, dziękujemy za zgłoszenie. "
+                "Problem techniczny został oznaczony jako pilny "
+                f"i przekazany do zespołu {team_text}. "
+                "Prosimy nie zamykać zgłoszenia do czasu rozwiązania problemu."
+            )
+
+        return (
+            "Dzień dobry, dziękujemy za zgłoszenie. "
+            f"Problem techniczny został przekazany do zespołu {team_text}. "
+            "Zespół IT przeanalizuje sprawę."
+        )
+
+    if category == "HR":
+        return (
+            "Dzień dobry, dziękujemy za zgłoszenie. "
+            f"Sprawa kadrowa została przekazana do zespołu {team_text}. "
+            "Po sprawdzeniu informacji wrócimy z odpowiedzią."
+        )
+
+    if priority == "HIGH":
+        return (
+            "Dzień dobry, dziękujemy za zgłoszenie. "
+            "Sprawa została oznaczona jako pilna "
+            f"i przekazana do zespołu {team_text}. "
+            "Zajmiemy się nią możliwie szybko."
+        )
+
+    return (
+        "Dzień dobry, dziękujemy za zgłoszenie. "
+        f"Sprawa została przekazana do zespołu {team_text}. "
+        "Wrócimy z odpowiedzią po analizie."
+    )
+
 def recalculate_sla_statuses(db):
     tickets = db.query(TicketHistory).all()
 
@@ -136,6 +194,12 @@ def save_ticket_history(db: Session, input_text: str, classification):
         priority=priority_value,
     )
 
+    suggested_reply = generate_suggested_reply(
+        category=category_value,
+        priority=priority_value,
+        assigned_to=assigned_to,
+    )
+
     ticket = TicketHistory(
         input_text=input_text,
         source_channel=source_channel_value,
@@ -151,6 +215,7 @@ def save_ticket_history(db: Session, input_text: str, classification):
 
         summary=classification.summary,
         suggested_action=classification.suggested_action,
+        suggested_reply=suggested_reply,
         source=classification.source,
 
         executed_action_type=(
