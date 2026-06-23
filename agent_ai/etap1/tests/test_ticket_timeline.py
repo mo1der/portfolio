@@ -47,15 +47,22 @@ def test_ticket_timeline_contains_created_event():
     data = timeline_response.json()
 
     assert "items" in data
-    assert len(data["items"]) == 1
+    assert len(data["items"]) >= 1
 
-    item = data["items"][0]
+    created_items = [
+        item for item in data["items"]
+        if item["event_type"] == "CREATED"
+    ]
+
+    assert len(created_items) == 1
+
+    item = created_items[0]
 
     assert item["event_type"] == "CREATED"
     assert item["title"] == "Ticket created"
     assert item["description"] == "Mam problem z fakturą."
     assert item["author"] == "API"
-    assert "created_at" in item
+    assert item["created_at"] is not None
 
 
 def test_ticket_timeline_contains_assignment_event():
@@ -252,3 +259,131 @@ def test_ticket_timeline_is_sorted_by_created_at():
     dates = [item["created_at"] for item in items]
 
     assert dates == sorted(dates)
+
+def test_ticket_timeline_contains_auto_assigned_event():
+    process_response = client.post(
+        "/process",
+        json={
+            "text": "Mam pilny problem z fakturą.",
+            "source_channel": "API",
+        },
+    )
+
+    assert process_response.status_code == 200
+
+    tickets_response = client.get("/tickets?category=FINANCE&priority=HIGH")
+
+    assert tickets_response.status_code == 200
+
+    ticket = tickets_response.json()["items"][0]
+    ticket_id = ticket["id"]
+
+    response = client.get(f"/tickets/{ticket_id}/timeline")
+
+    assert response.status_code == 200
+
+    data = response.json()
+    event_types = [item["event_type"] for item in data["items"]]
+
+    assert "AUTO_ASSIGNED" in event_types
+
+
+def test_ticket_timeline_contains_sla_created_event():
+    process_response = client.post(
+        "/process",
+        json={
+            "text": "Mam pilny problem z fakturą.",
+            "source_channel": "API",
+        },
+    )
+
+    assert process_response.status_code == 200
+
+    tickets_response = client.get("/tickets?category=FINANCE&priority=HIGH")
+
+    assert tickets_response.status_code == 200
+
+    ticket = tickets_response.json()["items"][0]
+    ticket_id = ticket["id"]
+
+    response = client.get(f"/tickets/{ticket_id}/timeline")
+
+    assert response.status_code == 200
+
+    data = response.json()
+    event_types = [item["event_type"] for item in data["items"]]
+
+    assert "SLA_CREATED" in event_types
+
+
+def test_ticket_timeline_contains_suggested_reply_event():
+    process_response = client.post(
+        "/process",
+        json={
+            "text": "Mam pilny problem z fakturą.",
+            "source_channel": "API",
+        },
+    )
+
+    assert process_response.status_code == 200
+
+    tickets_response = client.get("/tickets?category=FINANCE&priority=HIGH")
+
+    assert tickets_response.status_code == 200
+
+    ticket = tickets_response.json()["items"][0]
+    ticket_id = ticket["id"]
+
+    response = client.get(f"/tickets/{ticket_id}/timeline")
+
+    assert response.status_code == 200
+
+    data = response.json()
+    event_types = [item["event_type"] for item in data["items"]]
+
+    assert (
+        "AI_REPLY_GENERATED" in event_types
+        or "RULE_BASED_REPLY_GENERATED" in event_types
+    )
+
+
+def test_ticket_timeline_contains_duplicate_detected_event():
+    first_response = client.post(
+        "/process",
+        json={
+            "text": "Mam problem z fakturą za ostatni miesiąc.",
+            "source_channel": "API",
+        },
+    )
+
+    assert first_response.status_code == 200
+
+    second_response = client.post(
+        "/process",
+        json={
+            "text": "Mam problem z fakturą za ostatni miesiąc.",
+            "source_channel": "API",
+        },
+    )
+
+    assert second_response.status_code == 200
+
+    tickets_response = client.get(
+        "/tickets?category=FINANCE&priority=HIGH&limit=2&sort_by=created_at&sort_order=desc"
+    )
+
+    assert tickets_response.status_code == 200
+
+    newest_ticket = tickets_response.json()["items"][0]
+    ticket_id = newest_ticket["id"]
+
+    assert newest_ticket["possible_duplicate"] is True
+
+    response = client.get(f"/tickets/{ticket_id}/timeline")
+
+    assert response.status_code == 200
+
+    data = response.json()
+    event_types = [item["event_type"] for item in data["items"]]
+
+    assert "DUPLICATE_DETECTED" in event_types
